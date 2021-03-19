@@ -1,0 +1,10 @@
+rootProject.name = 'JvmHookFramework'
+def includeProject = { String name, String path ->
+    include(name)
+    project(name).projectDir = new File(rootDir, path)
+}
+
+includeProject(":api", "api")
+includeProject(":core", "core")
+includeProject(":testunit", "testunit")
+includeProject(":pack-release", "pack-release")

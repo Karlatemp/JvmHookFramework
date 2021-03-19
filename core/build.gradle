@@ -1,0 +1,22 @@
+plugins {
+    id 'java'
+}
+
+dependencies {
+    implementation project(':api')
+    implementation group: 'io.github.karlatemp', name: 'unsafe-accessor', version: '1.4.0'
+
+}
+
+task runTest(type: JavaExec) {
+    classpath = sourceSets.test.runtimeClasspath
+    dependsOn(':testunit:compileJava')
+
+    main = 'iog.B'
+
+//    jvmArgs(
+//            "-javaagent:" + project(':testunit-launcher').buildDir + "/libs/testunit-launcher-" + project(':testunit-launcher').version + ".jar=iog.B"
+//    )
+    jvmArgs('-agentpath:E:\\IDEAProjects\\JvmHookFramework\\native\\cmake-build-debug\\libnative.dll')
+    args(project(':testunit').buildDir.toString() + "/classes/java/main")
+}

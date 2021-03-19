@@ -1,0 +1,8 @@
+plugins {
+    id 'java'
+}
+
+dependencies {
+    // https://mvnrepository.com/artifact/io.github.karlatemp/unsafe-accessor
+    implementation group: 'io.github.karlatemp', name: 'unsafe-accessor', version: '1.4.0'
+}

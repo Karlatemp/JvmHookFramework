@@ -11,7 +11,7 @@
 
 
 static JavaVM *javaVm = nullptr;
-static jvmtiEnv *jtiEnv = nullptr;
+jvmtiEnv *jtiEnv = nullptr;
 
 extern jfieldID ArgumentsNativeClass$size;
 extern jfieldID ArgumentsNativeClass$address;
@@ -22,6 +22,7 @@ static jobject classLoaderX;
 static jmethodID shouldHookMethodEnter;
 
 static jmethodID broadcastMethodEnter;
+static jmethodID broadcastMethodExit;
 
 
 static jmethodID methodCallImplInit;
@@ -33,7 +34,20 @@ void init_ArgumentNative(JNIEnv *env, jvmtiEnv *jtiEnv);
 
 void init_ForceEarlyReturnNative(JNIEnv *env, jvmtiEnv *jtiEnv);
 
+void init_JvmReturnValueImpl(JNIEnv *jniEnv, jvmtiEnv *jvmti_env);
+
 jobject newForceEarlyReturnNative(JNIEnv *env, CallParameter *pointer);
+
+void clearForceEarlyReturnNativeAddress(JNIEnv *env, jobject);
+
+jobject new_JvmReturnValueImpl(
+        JNIEnv *jniEnv, jvmtiEnv *jvmti_env,
+        jboolean was_popped_by_exception, jobject jthr,
+        jvalue *pointer
+);
+
+void release_JvmReturnValueImpl(JNIEnv *jniEnv, jobject obj);
+
 
 jclass getDeclaredClass(jmethodID met) {
     jclass c;
@@ -206,17 +220,19 @@ JNICALL void onMethodEntry(
         returnForce.edited = false;
 
         //std::cout << "S2Bx " << methodCallImplInit << std::endl;
+        auto forceERN = newForceEarlyReturnNative(jni_env, &returnForce);
         auto call = jni_env->NewObject(
                 c,
                 methodCallImplInit,
                 methodOwner, metName0, metDesc0,
                 modifiers, anc,
-                newForceEarlyReturnNative(jni_env, &returnForce)
+                forceERN
         );
         //std::cout << "S2B" << std::endl;
 
         jni_env->CallStaticVoidMethod(bridgeClass, broadcastMethodEnter, call);
 
+        clearForceEarlyReturnNativeAddress(jni_env, forceERN);
         //std::cout << "SB" << std::endl;
         jni_env->SetLongField(anc, ArgumentsNativeClass$address, (jlong) 0);
         //std::cout << "SMB" << std::endl;
@@ -303,7 +319,91 @@ JNICALL void onMethodExit(jvmtiEnv *jvmti_env,
                           jmethodID method,
                           jboolean was_popped_by_exception,
                           jvalue return_value) {
-    // TODO
+    {
+        void *a;
+        jvmti_env->GetThreadLocalStorage(thread, &a);
+        if (a != nullptr) {
+            jvmti_env->SetThreadLocalStorage(thread, nullptr);
+            return;
+        }
+    }
+
+    jclass methodDeclaredClass;
+    jobject metClassloader;
+    jvmti_env->GetMethodDeclaringClass(method, &methodDeclaredClass);
+    jvmti_env->GetClassLoader(methodDeclaredClass, &metClassloader);
+
+
+    if (metClassloader == null) return;
+    if (jni_env->IsSameObject(metClassloader, classLoaderX)) return;
+    if (jni_env->IsSameObject(metClassloader, extClassLoader)) return;
+
+    // jthrowable jthr = jni_env->ExceptionOccurred();
+
+    char *methodDesc, *methodName;
+    jvmti_env->GetMethodName(method, &methodName, &methodDesc, nullptr);
+    jint modifiers;
+    jvmti_env->GetMethodModifiers(method, &modifiers);
+
+    jclass bridgeClass;
+    jvmti_env->GetMethodDeclaringClass(shouldHookMethodEnter, &bridgeClass);
+
+    auto methodNameJ = jni_env->NewStringUTF(methodName);
+    auto methodDescJ = jni_env->NewStringUTF(methodDesc);
+
+    CallParameter returnForce = CallParameter();
+    auto cc = newForceEarlyReturnNative(jni_env, &returnForce);
+
+    auto retV = new_JvmReturnValueImpl(jni_env, jvmti_env, was_popped_by_exception, null, &return_value);
+
+    jni_env->CallStaticVoidMethod(
+            bridgeClass, broadcastMethodExit,
+            methodDeclaredClass, methodNameJ, methodDescJ, modifiers, cc, retV
+    );
+
+    if (jni_env->ExceptionOccurred() != null) {
+        jvmti_env->SetThreadLocalStorage(thread, jtiEnv);
+    }
+
+    if (returnForce.edited) {
+        jvmti_env->SetThreadLocalStorage(thread, jtiEnv);
+        switch (methodDesc[indexOf(methodDesc, ')', 0) + 1]) {
+            case JVM_SIGNATURE_CLASS:
+            case JVM_SIGNATURE_ARRAY: {
+                auto o = (jobject) returnForce.value;
+                jvmti_env->ForceEarlyReturnObject(thread, o);
+                jni_env->DeleteGlobalRef(o);
+                break;
+            }
+            case JVM_SIGNATURE_INT:
+            case JVM_SIGNATURE_SHORT:
+            case JVM_SIGNATURE_CHAR:
+            case JVM_SIGNATURE_BOOLEAN:
+            case JVM_SIGNATURE_BYTE: {
+                jvmti_env->ForceEarlyReturnInt(thread, returnForce.iv);
+                break;
+            }
+            case JVM_SIGNATURE_VOID: {
+                jvmti_env->ForceEarlyReturnVoid(thread);
+                break;
+            }
+            case JVM_SIGNATURE_FLOAT: {
+                jvmti_env->ForceEarlyReturnFloat(thread, returnForce.jf);
+                break;
+            }
+            case JVM_SIGNATURE_DOUBLE: {
+                jvmti_env->ForceEarlyReturnDouble(thread, returnForce.jd);
+                break;
+            }
+            case JVM_SIGNATURE_LONG: {
+                jvmti_env->ForceEarlyReturnLong(thread, returnForce.lv);
+                break;
+            }
+        }
+    }
+
+    release_JvmReturnValueImpl(jni_env, retV);
+    clearForceEarlyReturnNativeAddress(jni_env, cc);
 }
 
 JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *vm, char *options, void *reserved) {
@@ -333,6 +433,8 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *vm, char *options, void *reserved) {
     memset(&callbacks, 0, sizeof callbacks);
     callbacks.MethodEntry = onMethodEntry;
     callbacks.MethodExit = onMethodExit;
+    callbacks.FramePop;
+
     if (jtiEnv->SetEventCallbacks(&callbacks, sizeof callbacks) != JNI_OK) {
         std::cerr << "Set callbacks failed" << std::endl;
         return JVMTI_ERROR_INTERNAL;
@@ -366,6 +468,10 @@ JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_Bootstrap_initializ
                 owner, "broadcastMethodEnter",
                 "(Lio/github/karlatemp/jvmhook/call/MethodCall;)V"
         );
+        broadcastMethodExit = env->GetStaticMethodID(
+                owner, "broadcastMethodExit",
+                "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;ILio/github/karlatemp/jvmhook/call/MethodCall$ForceEarlyReturn;Lio/github/karlatemp/jvmhook/call/MethodReturnValue;)V"
+        );
 
         jclass MethodCallImpl = env->FindClass("io/github/karlatemp/jvmhook/core/MethodCallImpl");
         methodCallImplInit = env->GetMethodID(
@@ -376,6 +482,7 @@ JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_Bootstrap_initializ
     }
     init_ArgumentNative(env, jtiEnv);
     init_ForceEarlyReturnNative(env, jtiEnv);
+    init_JvmReturnValueImpl(env, jtiEnv);
     {
         auto e = env->ExceptionOccurred();
         auto extCl = env->FindClass("io/github/karlatemp/jvmhook/core/extsys/ExtLoader");

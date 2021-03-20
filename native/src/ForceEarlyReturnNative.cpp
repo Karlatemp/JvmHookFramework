@@ -23,6 +23,10 @@ jobject newForceEarlyReturnNative(JNIEnv *env, CallParameter *pointer) {
     return o;
 }
 
+void clearForceEarlyReturnNativeAddress(JNIEnv *env, jobject o) {
+    env->SetLongField(o, ForceEarlyReturnNative$address, 0);
+}
+
 CallParameter *getCP(JNIEnv *env, jobject thiz) {
     return (CallParameter *) env->GetLongField(thiz, ForceEarlyReturnNative$address);
 }

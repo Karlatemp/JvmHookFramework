@@ -41,7 +41,7 @@ jclass getDeclaredClass(jmethodID met) {
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "bugprone-misplaced-widening-cast"
 
-void onMethodEntry(jvmtiEnv *jvmti_env,
+JNICALL void onMethodEntry(jvmtiEnv *jvmti_env,
                    JNIEnv *jni_env,
                    jthread thread,
                    jmethodID method) {
@@ -289,7 +289,7 @@ void onMethodEntry(jvmtiEnv *jvmti_env,
 
 #pragma clang diagnostic pop
 
-void onMethodExit(jvmtiEnv *jvmti_env,
+JNICALL void onMethodExit(jvmtiEnv *jvmti_env,
                   JNIEnv *jni_env,
                   jthread thread,
                   jmethodID method,

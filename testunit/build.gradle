@@ -1,3 +1,10 @@
 plugins {
     id 'java'
 }
+
+dependencies {
+    implementation project(':api')
+    implementation project(':testunit-inject')
+}
+
+(project(':pack-release').tasks.runCiTest as JavaExec).classpath = configurations.runtimeClasspath

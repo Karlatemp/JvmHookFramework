@@ -1,10 +1,12 @@
 package io.github.karlatemp.jvmhook.core;
 
+import io.github.karlatemp.jvmhook.JvmHookFramework;
 import io.github.karlatemp.jvmhook.call.MethodCall;
 import io.github.karlatemp.jvmhook.call.MethodHook;
 import io.github.karlatemp.unsafeaccessor.Unsafe;
 
 import java.lang.instrument.Instrumentation;
+import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
@@ -17,10 +19,35 @@ public class Bootstrap {
 
     static {
         unsafe = Unsafe.getUnsafe();
+        initializeBridge();
         initializeNative();
     }
 
     private static native void initializeNative();
+
+    private static void initializeBridge() {
+        try {
+            Field f = JvmHookFramework.class.getDeclaredField("INSTANCE");
+            unsafe.ensureClassInitialized(JvmHookFramework.class);
+            unsafe.putReference(
+                    unsafe.staticFieldBase(f),
+                    unsafe.staticFieldOffset(f),
+                    new JvmHookFramework() {
+                        @Override
+                        public void registerHook(Class<?> target, String methodName, String methodDesc, MethodHook hook) {
+                            Bootstrap.registerHook(target, methodName, methodDesc, hook);
+                        }
+
+                        @Override
+                        public void unregisterHook(Class<?> target, String methodName, String methodDesc, MethodHook hook) {
+                            Bootstrap.unregisterHook(target, methodName, methodDesc, hook);
+                        }
+                    }
+            );
+        } catch (Exception e) {
+            throw new Error(e);
+        }
+    }
 
     private static Map<String, Map<String, Queue<MethodHook>>> getTables(Class<?> c, boolean create) {
         Map<String, Map<String, Queue<MethodHook>>> map = hooks.get(c);

@@ -6,5 +6,7 @@ def includeProject = { String name, String path ->
 
 includeProject(":api", "api")
 includeProject(":core", "core")
+includeProject(":extension", "extension")
+includeProject(":testunit-inject", "testunit/run")
 includeProject(":testunit", "testunit")
 includeProject(":pack-release", "pack-release")

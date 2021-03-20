@@ -4,3 +4,5 @@
 /native/cmake*
 build/
 *.class
+
+native-build/

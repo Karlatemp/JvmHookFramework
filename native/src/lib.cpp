@@ -26,6 +26,9 @@ static jmethodID broadcastMethodEnter;
 
 static jmethodID methodCallImplInit;
 
+extern jobject extClassLoader;
+
+
 void init_ArgumentNative(JNIEnv *env, jvmtiEnv *jtiEnv);
 
 void init_ForceEarlyReturnNative(JNIEnv *env, jvmtiEnv *jtiEnv);
@@ -41,10 +44,12 @@ jclass getDeclaredClass(jmethodID met) {
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "bugprone-misplaced-widening-cast"
 
-JNICALL void onMethodEntry(jvmtiEnv *jvmti_env,
-                   JNIEnv *jni_env,
-                   jthread thread,
-                   jmethodID method) {
+JNICALL void onMethodEntry(
+        jvmtiEnv *jvmti_env,
+        JNIEnv *jni_env,
+        jthread thread,
+        jmethodID method
+) {
 
     jobject classLoaderZ;
     jclass methodOwner;
@@ -52,6 +57,7 @@ JNICALL void onMethodEntry(jvmtiEnv *jvmti_env,
     jvmti_env->GetClassLoader(methodOwner, &classLoaderZ);
     if (classLoaderZ == nullptr) return;
     if (jni_env->IsSameObject(classLoaderZ, classLoaderX)) return;
+    if (jni_env->IsSameObject(classLoaderZ, extClassLoader)) return;
 
     char *cln, *methodDesc, *methodName;
     jvmti_env->GetClassSignature(methodOwner, &cln, nullptr);
@@ -75,7 +81,9 @@ JNICALL void onMethodEntry(jvmtiEnv *jvmti_env,
     //std::cout << "HOOK CALL: " << hook << std::endl;
     if (hook) {
         int slots = 0, size = 0;
+        //std::cout << "MDSC: " << methodDesc << std::endl;
         size_t end = indexOf(methodDesc, ')', 1);
+        //std::cout << "END: " << end << std::endl;
         for (int i = 1; i < end;) {
             readType(methodDesc, &i, end);
             size++;
@@ -243,7 +251,7 @@ JNICALL void onMethodEntry(jvmtiEnv *jvmti_env,
         }
         //std::cout << "S2" << std::endl;
         if (returnForce.edited) {
-            // std::cout << "RF EDX " << methodDesc[end + 1] << std::endl;
+            // //std::cout << "RF EDX " << methodDesc[end + 1] << std::endl;
             switch (methodDesc[end + 1]) {
                 case JVM_SIGNATURE_CLASS:
                 case JVM_SIGNATURE_ARRAY: {
@@ -290,11 +298,11 @@ JNICALL void onMethodEntry(jvmtiEnv *jvmti_env,
 #pragma clang diagnostic pop
 
 JNICALL void onMethodExit(jvmtiEnv *jvmti_env,
-                  JNIEnv *jni_env,
-                  jthread thread,
-                  jmethodID method,
-                  jboolean was_popped_by_exception,
-                  jvalue return_value) {
+                          JNIEnv *jni_env,
+                          jthread thread,
+                          jmethodID method,
+                          jboolean was_popped_by_exception,
+                          jvalue return_value) {
     // TODO
 }
 
@@ -336,6 +344,8 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *vm, char *options, void *reserved) {
 
 
 JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_Bootstrap_initializeNative(JNIEnv *env, jclass owner) {
+    //std::cout << "initializeNative called" << std::endl;
+
     if (jtiEnv == nullptr) {
         env->GetJavaVM(&javaVm);
         Agent_OnLoad(javaVm, nullptr, nullptr);
@@ -366,6 +376,17 @@ JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_Bootstrap_initializ
     }
     init_ArgumentNative(env, jtiEnv);
     init_ForceEarlyReturnNative(env, jtiEnv);
+    {
+        auto e = env->ExceptionOccurred();
+        auto extCl = env->FindClass("io/github/karlatemp/jvmhook/core/extsys/ExtLoader");
+        if (extCl == null) {
+            env->ExceptionClear();
+            if (e != null) env->Throw(e);
+        } else {
+            auto loadMet = env->GetStaticMethodID(extCl, "load", "()V");
+            env->CallStaticVoidMethod(extCl, loadMet);
+        }
+    }
 
     jtiEnv->SetEventNotificationMode(
             JVMTI_ENABLE,

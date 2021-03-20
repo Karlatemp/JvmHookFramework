@@ -39,5 +39,5 @@ jobs:
           path: |
             native/cmake-build-debug/bin
       - name: RunNative
-        if: "${{ matrix.cross  == 'linux-arm' }}"
+        if: "${{ matrix.cross  == 'linux-x64' }}"
         run: ./gradlew runCiTest

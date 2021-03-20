@@ -6,9 +6,10 @@ include_directories(../core/build/generated/sources/headers/java/main)
 
 IF (WIN32)
    include_directories(includes/jni/win32)
+ELSEIF(UNIX)
+    include_directories(includes/jni/unix)
 ELSE()
     set(JAVA_AWT_LIBRARY NotNeeded)
-    set(JAVA_JVM_LIBRARY NotNeeded)
     find_package(JNI REQUIRED)
 
     include_directories(${JAVA_INCLUDE_PATH})

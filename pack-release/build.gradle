@@ -89,9 +89,12 @@ task runCiTest(type: JavaExec) {
     dependsOn(tasks.packAll)
     dependsOn(':testunit:jar')
 
-    def natives = rootProject.file('native/cmake-build-debug/bin').listFiles()
+    def natives = rootProject.file('native/cmake-build-debug').listFiles()
     if (natives != null && natives.length != 0) {
-        jvmArgs('-agentpath:' + natives[0])
+        def lib = natives.find { it.isFile() && (it.name.endsWith('.so') || it.name.endsWith('.dll')) }
+        if (lib != null) {
+            jvmArgs('-agentpath:' + lib)
+        }
     }
     jvmArgs('-javaagent:' + (tasks.packAll as Jar).archiveFile.get().asFile.path)
     mainClass.set('tui.TestRun')

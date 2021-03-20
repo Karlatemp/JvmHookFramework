@@ -11,10 +11,4 @@ mkdir bin
 cp *.dll bin
 cp *.so bin
 
-if [ $ecode != 0 ]; then
-  exit $ecode
-fi
-
-cd /work
-
-bash gradlew runCiTest
+exit $ecode

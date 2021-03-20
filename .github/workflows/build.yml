@@ -41,3 +41,32 @@ jobs:
       - name: RunNative
         if: "${{ matrix.cross  == 'linux-x64' }}"
         run: ./gradlew runCiTest
+
+  build-step-2:
+    runs-on: ubuntu-latest
+    needs: [ build ]
+    name: Upload jars
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup JDK 8
+        uses: actions/setup-java@v1
+        with:
+          java-version: 8
+      - name: Chmod scripts
+        run: |
+          chmod +x gradlew
+      - name: Clean caches
+        run: ./gradlew clean
+      - name: Build jars
+        run: >
+          ./gradlew
+          :pack-release:packAll
+          :pack-release:copyApi
+          :pack-release:randomObf
+      - name: Archive Jar artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: Jars
+          path: |
+            pack-release/build/libs
+

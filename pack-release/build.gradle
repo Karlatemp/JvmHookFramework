@@ -7,6 +7,8 @@ plugins {
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 task packCore(type: ShadowJar) {
+    archiveBaseName.set('jvm-hook-framework')
+
     configurations = [
             project(':core').configurations.runtimeClasspath,
             project(':extension').configurations.runtimeClasspath
@@ -18,6 +20,8 @@ task packCore(type: ShadowJar) {
 }
 
 task packAll(type: Jar) {
+    archiveBaseName.set('jvm-hook-framework')
+
     from sourceSets.main.output
     dependsOn configurations.runtimeClasspath
     archiveClassifier.set('launcher')
@@ -34,11 +38,17 @@ task packAll(type: Jar) {
     }
 }
 
+task copyApi(type: Copy) {
+    into(new File(buildDir, 'libs'))
+    from(project(':api').tasks.jar.outputs.files)
+}
 
 ({
     def pck = UUID.randomUUID().toString() + '.' + UUID.randomUUID().toString()
 
     task randomObf_objSrc(type: ShadowJar) {
+        archiveBaseName.set('jvm-hook-framework')
+
         from sourceSets.main.output
         dependsOn configurations.runtimeClasspath
         archiveClassifier.set('launcher')
@@ -54,6 +64,8 @@ task packAll(type: Jar) {
     }
 
     task randomObf(type: Jar) {
+        archiveBaseName.set('jvm-hook-framework')
+
         from(zipTree(tasks.randomObf_objSrc.outputs.files.first()))
         dependsOn tasks.randomObf_objSrc
         archiveClassifier.set('launcher-obf')

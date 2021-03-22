@@ -417,23 +417,25 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *vm, char *options, void *reserved) {
         return jnierror;
     }
     jvmtiCapabilities capabilities;
-    jtiEnv->GetCapabilities(&capabilities);
+    memset(&capabilities, 0, sizeof(jvmtiCapabilities));
+    // jtiEnv->GetCapabilities(&capabilities);
     capabilities.can_generate_method_entry_events = true;
     capabilities.can_generate_method_exit_events = true;
     capabilities.can_force_early_return = true;
     // capabilities.can_generate_native_method_bind_events = true;
     capabilities.can_access_local_variables = true;
+
     jint cresp = jtiEnv->AddCapabilities(&capabilities);
     if (cresp != JNI_OK) {
         std::cerr << "AddCapabilities failed: " << cresp << std::endl;
         return cresp;
     }
 
+
     jvmtiEventCallbacks callbacks;
     memset(&callbacks, 0, sizeof callbacks);
     callbacks.MethodEntry = onMethodEntry;
     callbacks.MethodExit = onMethodExit;
-    callbacks.FramePop;
 
     if (jtiEnv->SetEventCallbacks(&callbacks, sizeof callbacks) != JNI_OK) {
         std::cerr << "Set callbacks failed" << std::endl;

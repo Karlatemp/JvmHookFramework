@@ -18,7 +18,7 @@ JNIEXPORT jstring JNICALL Java_io_github_karlatemp_jvmhook_core_Bootstrap_00024J
     auto c = jtiEnv->GetMethodName(met0, null, &desc, null);
     if (c != JNI_OK) {
         env->ThrowNew(env->FindClass("java/lang/IllegalStateException"), "JNI Response not JNI_OK");
-        return nullptr;
+        return null;
     }
     return env->NewStringUTF(desc);
 }

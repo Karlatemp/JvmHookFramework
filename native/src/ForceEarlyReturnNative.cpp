@@ -38,7 +38,7 @@ CallParameter *getCP(JNIEnv *env, jobject thiz) {
 JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_ForceEarlyReturnNative_returnVoid
         (JNIEnv *env, jobject thiz) {
     auto c = getCP(env, thiz);
-    if (c == nullptr)return;
+    if (c == null)return;
     c->edited = true;
 }
 
@@ -50,7 +50,7 @@ JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_ForceEarlyReturnNat
 JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_ForceEarlyReturnNative_returnInt
         (JNIEnv *env, jobject thiz, jint value) {
     auto c = getCP(env, thiz);
-    if (c == nullptr)return;
+    if (c == null)return;
     c->edited = true;
     c->iv = value;
 }
@@ -63,7 +63,7 @@ JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_ForceEarlyReturnNat
 JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_ForceEarlyReturnNative_returnFloat
         (JNIEnv *env, jobject thiz, jfloat value) {
     auto c = getCP(env, thiz);
-    if (c == nullptr)return;
+    if (c == null)return;
     c->edited = true;
     c->jf = value;
 }
@@ -76,7 +76,7 @@ JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_ForceEarlyReturnNat
 JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_ForceEarlyReturnNative_returnDouble
         (JNIEnv *env, jobject thiz, jdouble value) {
     auto c = getCP(env, thiz);
-    if (c == nullptr)return;
+    if (c == null)return;
     c->edited = true;
     c->jf = value;
 }
@@ -89,7 +89,7 @@ JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_ForceEarlyReturnNat
 JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_ForceEarlyReturnNative_returnLong
         (JNIEnv *env, jobject thiz, jlong value) {
     auto c = getCP(env, thiz);
-    if (c == nullptr)return;
+    if (c == null)return;
     c->edited = true;
     c->lv = value;
 }
@@ -102,7 +102,7 @@ JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_ForceEarlyReturnNat
 JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_ForceEarlyReturnNative_returnObject
         (JNIEnv *env, jobject thiz, jobject value) {
     auto c = getCP(env, thiz);
-    if (c == nullptr)return;
+    if (c == null)return;
     if (c->edited) {
         env->DeleteGlobalRef((jobject) (c->value));
     }

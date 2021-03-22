@@ -10,8 +10,8 @@
 #include "CallParameter.h"
 
 
-static JavaVM *javaVm = nullptr;
-jvmtiEnv *jtiEnv = nullptr;
+static JavaVM *javaVm = null;
+jvmtiEnv *jtiEnv = null;
 
 extern jfieldID ArgumentsNativeClass$size;
 extern jfieldID ArgumentsNativeClass$address;
@@ -69,13 +69,13 @@ JNICALL void onMethodEntry(
     jclass methodOwner;
     jvmti_env->GetMethodDeclaringClass(method, &methodOwner);
     jvmti_env->GetClassLoader(methodOwner, &classLoaderZ);
-    if (classLoaderZ == nullptr) return;
+    if (classLoaderZ == null) return;
     if (jni_env->IsSameObject(classLoaderZ, classLoaderX)) return;
     if (jni_env->IsSameObject(classLoaderZ, extClassLoader)) return;
 
     char *cln, *methodDesc, *methodName;
-    jvmti_env->GetClassSignature(methodOwner, &cln, nullptr);
-    jvmti_env->GetMethodName(method, &methodName, &methodDesc, nullptr);
+    jvmti_env->GetClassSignature(methodOwner, &cln, null);
+    jvmti_env->GetMethodName(method, &methodName, &methodDesc, null);
     jint modifiers;
     jvmti_env->GetMethodModifiers(method, &modifiers);
     jstring metName0 = jni_env->NewStringUTF(methodName);
@@ -205,12 +205,12 @@ JNICALL void onMethodEntry(
         if ((modifiers & JVM_ACC_STATIC) == 0) {
             jvmti_env->GetLocalInstance(thread, 0, &thisObj);
         } else {
-            thisObj = nullptr;
+            thisObj = null;
         }
 
         jni_env->SetIntField(anc, ArgumentsNativeClass$size, size);
         jni_env->SetLongField(anc, ArgumentsNativeClass$address, (jlong) (&parameters));
-        if (thisObj != nullptr) {
+        if (thisObj != null) {
             //std::cout << "TOBJ " << ArgumentsNativeClass$thisObj << std::endl;
             jni_env->SetObjectField(anc, ArgumentsNativeClass$thisObj, thisObj);
             //std::cout << "OXAV " << ArgumentsNativeClass$thisObj << std::endl;
@@ -322,8 +322,8 @@ JNICALL void onMethodExit(jvmtiEnv *jvmti_env,
     {
         void *a;
         jvmti_env->GetThreadLocalStorage(thread, &a);
-        if (a != nullptr) {
-            jvmti_env->SetThreadLocalStorage(thread, nullptr);
+        if (a != null) {
+            jvmti_env->SetThreadLocalStorage(thread, null);
             return;
         }
     }
@@ -341,7 +341,7 @@ JNICALL void onMethodExit(jvmtiEnv *jvmti_env,
     // jthrowable jthr = jni_env->ExceptionOccurred();
 
     char *methodDesc, *methodName;
-    jvmti_env->GetMethodName(method, &methodName, &methodDesc, nullptr);
+    jvmti_env->GetMethodName(method, &methodName, &methodDesc, null);
     jint modifiers;
     jvmti_env->GetMethodModifiers(method, &modifiers);
 
@@ -450,9 +450,9 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *vm, char *options, void *reserved) {
 JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_Bootstrap_initializeNative(JNIEnv *env, jclass owner) {
     //std::cout << "initializeNative called" << std::endl;
 
-    if (jtiEnv == nullptr) {
+    if (jtiEnv == null) {
         env->GetJavaVM(&javaVm);
-        Agent_OnLoad(javaVm, nullptr, nullptr);
+        Agent_OnLoad(javaVm, null, null);
     }
     jtiEnv->GetClassLoader(owner, &classLoaderX);
 
@@ -500,9 +500,9 @@ JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_Bootstrap_initializ
     jtiEnv->SetEventNotificationMode(
             JVMTI_ENABLE,
             JVMTI_EVENT_METHOD_ENTRY,
-            nullptr /* all threads */);
+            null /* all threads */);
     jtiEnv->SetEventNotificationMode(
             JVMTI_ENABLE,
             JVMTI_EVENT_METHOD_EXIT,
-            nullptr /* all threads */);
+            null /* all threads */);
 }

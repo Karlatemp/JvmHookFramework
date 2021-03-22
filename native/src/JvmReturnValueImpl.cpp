@@ -136,6 +136,6 @@ JNIEXPORT jdouble JNICALL Java_io_github_karlatemp_jvmhook_core_JvmReturnValueIm
 JNIEXPORT jobject JNICALL Java_io_github_karlatemp_jvmhook_core_JvmReturnValueImpl_asObject
         (JNIEnv *e, jobject o) {
     auto v = getJv(e, o);
-    if (v == null) return nullptr;
+    if (v == null) return null;
     return (*v).l;
 }

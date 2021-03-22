@@ -8,7 +8,12 @@
 #include <jni.h>
 #include <jvmti.h>
 
+
+#if __APPLE__
+#define null 0
+#else
 #define null nullptr
+#endif
 
 
 #endif //NATIVE_LIB_H

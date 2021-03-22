@@ -9,12 +9,12 @@
 #include <iostream>
 
 
-static jvmtiEnv *jtiEnv = nullptr;
+static jvmtiEnv *jtiEnv = null;
 
-jfieldID ArgumentsNativeClass$size = nullptr;
-jfieldID ArgumentsNativeClass$address = nullptr;
-jfieldID ArgumentsNativeClass$thisObj = nullptr;
-jmethodID ArgumentsNativeClass$init = nullptr;
+jfieldID ArgumentsNativeClass$size = null;
+jfieldID ArgumentsNativeClass$address = null;
+jfieldID ArgumentsNativeClass$thisObj = null;
+jmethodID ArgumentsNativeClass$init = null;
 
 void init_ArgumentNative(JNIEnv *env, jvmtiEnv *jvmt) {
     jtiEnv = jvmt;
@@ -30,7 +30,7 @@ void init_ArgumentNative(JNIEnv *env, jvmtiEnv *jvmt) {
 
 CallParameter *getParameters(JNIEnv *env, jobject thiz) {
     auto f = env->GetLongField(thiz, ArgumentsNativeClass$address);
-    if (f == 0) return nullptr;
+    if (f == 0) return null;
     return *((CallParameter **) f);
 }
 
@@ -41,7 +41,7 @@ jint getSize(JNIEnv *env, jobject thiz) {
 void ile(JNIEnv *env) {
     env->ThrowNew(
             env->FindClass("java/lang/IllegalArgumentException"),
-            nullptr
+            null
     );
 }
 
@@ -54,7 +54,7 @@ JNIEXPORT jint JNICALL Java_io_github_karlatemp_jvmhook_core_ArgumentsNative_get
         (JNIEnv *env, jobject thiz, jint index) {
     if (index < 0) return -1;
     auto p = getParameters(env, thiz);
-    if (p == nullptr) return -1;
+    if (p == null) return -1;
     if (index < getSize(env, thiz)) {
         auto px = p[index];
         if (px.type != JVM_SIGNATURE_INT) {
@@ -75,7 +75,7 @@ JNIEXPORT jbyte JNICALL Java_io_github_karlatemp_jvmhook_core_ArgumentsNative_ge
         (JNIEnv *env, jobject thiz, jint index) {
     if (index < 0) return -1;
     auto p = getParameters(env, thiz);
-    if (p == nullptr) return -1;
+    if (p == null) return -1;
     if (index < getSize(env, thiz)) {
         auto px = p[index];
         if (px.type != JVM_SIGNATURE_INT) {
@@ -96,7 +96,7 @@ JNIEXPORT jdouble JNICALL Java_io_github_karlatemp_jvmhook_core_ArgumentsNative_
         (JNIEnv *env, jobject thiz, jint index) {
     if (index < 0) return -1;
     auto p = getParameters(env, thiz);
-    if (p == nullptr) return -1;
+    if (p == null) return -1;
     if (index < getSize(env, thiz)) {
         auto px = p[index];
         std::cout << "SST: " << px.type << " I " << index << std::endl;
@@ -117,7 +117,7 @@ JNIEXPORT jfloat JNICALL Java_io_github_karlatemp_jvmhook_core_ArgumentsNative_g
         (JNIEnv *env, jobject thiz, jint index) {
     if (index < 0) return -1;
     auto p = getParameters(env, thiz);
-    if (p == nullptr) return -1;
+    if (p == null) return -1;
     if (index < getSize(env, thiz)) {
         auto px = p[index];
         if (px.type != JVM_SIGNATURE_FLOAT) {
@@ -137,7 +137,7 @@ JNIEXPORT jshort JNICALL Java_io_github_karlatemp_jvmhook_core_ArgumentsNative_g
         (JNIEnv *env, jobject thiz, jint index) {
     if (index < 0) return -1;
     auto p = getParameters(env, thiz);
-    if (p == nullptr) return -1;
+    if (p == null) return -1;
     if (index < getSize(env, thiz)) {
         auto px = p[index];
         if (px.type != JVM_SIGNATURE_INT) {
@@ -157,7 +157,7 @@ JNIEXPORT jboolean JNICALL Java_io_github_karlatemp_jvmhook_core_ArgumentsNative
         (JNIEnv *env, jobject thiz, jint index) {
     if (index < 0) return 0;
     auto p = getParameters(env, thiz);
-    if (p == nullptr) return 0;
+    if (p == null) return 0;
     if (index < getSize(env, thiz)) {
         auto px = p[index];
         if (px.type != JVM_SIGNATURE_INT) {
@@ -177,7 +177,7 @@ JNIEXPORT jlong JNICALL Java_io_github_karlatemp_jvmhook_core_ArgumentsNative_ge
         (JNIEnv *env, jobject thiz, jint index) {
     if (index < 0) return -1;
     auto p = getParameters(env, thiz);
-    if (p == nullptr) return -1;
+    if (p == null) return -1;
     if (index < getSize(env, thiz)) {
         auto px = p[index];
         if (px.type != JVM_SIGNATURE_LONG) {
@@ -197,7 +197,7 @@ JNIEXPORT jchar JNICALL Java_io_github_karlatemp_jvmhook_core_ArgumentsNative_ge
         (JNIEnv *env, jobject thiz, jint index) {
     if (index < 0) return -1;
     auto p = getParameters(env, thiz);
-    if (p == nullptr) return -1;
+    if (p == null) return -1;
     if (index < getSize(env, thiz)) {
         auto px = p[index];
         if (px.type != JVM_SIGNATURE_INT) {
@@ -215,9 +215,9 @@ JNIEXPORT jchar JNICALL Java_io_github_karlatemp_jvmhook_core_ArgumentsNative_ge
  */
 JNIEXPORT jobject JNICALL Java_io_github_karlatemp_jvmhook_core_ArgumentsNative_getAsObject
         (JNIEnv *env, jobject thiz, jint index) {
-    if (index < 0) return nullptr;
+    if (index < 0) return null;
     auto p = getParameters(env, thiz);
-    if (p == nullptr) return nullptr;
+    if (p == null) return null;
     if (index < getSize(env, thiz)) {
         auto px = p[index];
         if (px.type != JVM_SIGNATURE_CLASS) {
@@ -226,7 +226,7 @@ JNIEXPORT jobject JNICALL Java_io_github_karlatemp_jvmhook_core_ArgumentsNative_
             return (jobject) px.value;
         }
     }
-    return nullptr;
+    return null;
 
 }
 
@@ -240,7 +240,7 @@ JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_ArgumentsNative_put
         (JNIEnv *env, jobject thiz, jint index, jbyte value) {
     if (index < 0) return;
     auto p = getParameters(env, thiz);
-    if (p == nullptr) return;
+    if (p == null) return;
     if (index < getSize(env, thiz)) {
         auto px = p[index];
         if (px.type != JVM_SIGNATURE_INT) {
@@ -262,7 +262,7 @@ JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_ArgumentsNative_put
         (JNIEnv *env, jobject thiz, jint index, jfloat value) {
     if (index < 0) return;
     auto p = getParameters(env, thiz);
-    if (p == nullptr) return;
+    if (p == null) return;
     if (index < getSize(env, thiz)) {
         auto px = p[index];
         if (px.type != JVM_SIGNATURE_FLOAT) {
@@ -284,7 +284,7 @@ JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_ArgumentsNative_put
         (JNIEnv *env, jobject thiz, jint index, jshort value) {
     if (index < 0) return;
     auto p = getParameters(env, thiz);
-    if (p == nullptr) return;
+    if (p == null) return;
     if (index < getSize(env, thiz)) {
         auto px = p[index];
         if (px.type != JVM_SIGNATURE_INT) {
@@ -306,7 +306,7 @@ JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_ArgumentsNative_put
         (JNIEnv *env, jobject thiz, jint index, jboolean value) {
     if (index < 0) return;
     auto p = getParameters(env, thiz);
-    if (p == nullptr) return;
+    if (p == null) return;
     if (index < getSize(env, thiz)) {
         auto px = p[index];
         if (px.type != JVM_SIGNATURE_INT) {
@@ -327,7 +327,7 @@ JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_ArgumentsNative_put
         (JNIEnv *env, jobject thiz, jint index, jdouble value) {
     if (index < 0) return;
     auto p = getParameters(env, thiz);
-    if (p == nullptr) return;
+    if (p == null) return;
     if (index < getSize(env, thiz)) {
         auto px = p[index];
         if (px.type != JVM_SIGNATURE_DOUBLE) {
@@ -348,7 +348,7 @@ JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_ArgumentsNative_put
         (JNIEnv *env, jobject thiz, jint index, jlong value) {
     if (index < 0) return;
     auto p = getParameters(env, thiz);
-    if (p == nullptr) return;
+    if (p == null) return;
     if (index < getSize(env, thiz)) {
         auto px = p[index];
         if (px.type != JVM_SIGNATURE_LONG) {
@@ -370,7 +370,7 @@ JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_ArgumentsNative_put
         (JNIEnv *env, jobject thiz, jint index, jchar value) {
     if (index < 0) return;
     auto p = getParameters(env, thiz);
-    if (p == nullptr) return;
+    if (p == null) return;
     if (index < getSize(env, thiz)) {
         auto px = p[index];
         if (px.type != JVM_SIGNATURE_INT) {
@@ -392,7 +392,7 @@ JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_ArgumentsNative_put
         (JNIEnv *env, jobject thiz, jint index, jobject value) {
     if (index < 0) return;
     auto p = getParameters(env, thiz);
-    if (p == nullptr) return;
+    if (p == null) return;
     if (index < getSize(env, thiz)) {
         auto px = p[index];
         if (px.type != JVM_SIGNATURE_CLASS) {

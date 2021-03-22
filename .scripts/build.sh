@@ -10,5 +10,6 @@ mkdir bin
 
 cp *.dll bin
 cp *.so bin
+cp *.dylib bin
 
 exit $ecode

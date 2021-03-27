@@ -18,6 +18,9 @@ public class RunCi {
         //    `- ....
         String version = args[1];
         String postUrl = args[2];
+        postUrl = postUrl.replaceAll("\\{.*\\}", "");
+        System.out.println("Post url: " + postUrl);
+
         String prefix = "jvm-hook-framework-";
         Map<String, File> files = new HashMap<>();
         for (File dir : artifacts.listFiles()) {
@@ -39,7 +42,9 @@ public class RunCi {
             URL u = new URL(postUrl + "?name=" + URLEncoder.encode(fileEntry.getKey(), "UTF-8"));
             HttpURLConnection connection = (HttpURLConnection) u.openConnection();
             connection.setRequestMethod("POST");
+            connection.setRequestProperty("Accept", "application/vnd.github.v3+json");
             connection.setRequestProperty("Content-Length", String.valueOf(fileEntry.getValue().length()));
+            connection.setRequestProperty("Content-Type", "application/zip");
             connection.setRequestProperty("Authorization", "token " + System.getenv("GH_TOKEN"));
 
             connection.setDoOutput(true);
@@ -50,6 +55,7 @@ public class RunCi {
                         int len = is.read(buf);
                         if (len == -1) break;
                         outputStream.write(buf, 0, len);
+                        outputStream.flush();
                     }
                 }
                 outputStream.close();

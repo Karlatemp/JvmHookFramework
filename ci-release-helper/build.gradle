@@ -12,5 +12,5 @@ task uploadReleaseAssets(type: JavaExec) {
 
     main = 'ci.RunCi'
 
-    args('temp/artifacts', rootProject.version, String.valueOf(System.getenv("POST_URL")))
+    args(rootProject.file('temp/artifacts').absolutePath, rootProject.version, String.valueOf(System.getenv("POST_URL")))
 }

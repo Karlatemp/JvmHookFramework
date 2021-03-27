@@ -1,0 +1,16 @@
+plugins {
+    id 'java'
+}
+
+dependencies {
+    implementation(gradleApi())
+}
+
+
+task uploadReleaseAssets(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+
+    main = 'ci.RunCi'
+
+    args('temp/artifacts', rootProject.version, String.valueOf(System.getenv("POST_URL")))
+}

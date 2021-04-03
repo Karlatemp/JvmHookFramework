@@ -3,7 +3,7 @@
 #include <iostream>
 
 size_t lateIndexOf(const char *string, char c) {
-    for (size_t i = strlen(string) - 1; i > 0; i++) {
+    for (size_t i = strlen(string) - 1; i > 0; i--) {
         if (string[i] == c) return i;
     }
     return -1;

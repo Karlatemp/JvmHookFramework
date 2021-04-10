@@ -70,6 +70,14 @@ public class Bootstrap {
     public static void registerHook(
             Class<?> target, String methodName, String methodDesc, MethodHook hook
     ) {
+        synchronized (Bootstrap.class) {
+            notifyHookClass(target);
+            registerHook0(
+                    ("L" + target.getName() + ";").replace('.', '/'),
+                    methodName,
+                    methodDesc
+            );
+        }
         Map<String, Map<String, Queue<MethodHook>>> tables = getTables(target, true);
         synchronized (tables) {
             tables.computeIfAbsent(
@@ -82,6 +90,13 @@ public class Bootstrap {
     public static void unregisterHook(
             Class<?> target, String methodName, String methodDesc, MethodHook hook
     ) {
+        synchronized (Bootstrap.class) {
+            unregisterHook0(
+                    ("L" + target.getName() + ";").replace('.', '/'),
+                    methodName,
+                    methodDesc
+            );
+        }
         Map<String, Map<String, Queue<MethodHook>>> tables = getTables(target, false);
         if (tables == null) return;
         synchronized (tables) {
@@ -93,6 +108,14 @@ public class Bootstrap {
             }
         }
     }
+
+    private static native void registerHook0(
+            String className, String methodName, String methodDesc
+    );
+
+    private static native void unregisterHook0(
+            String className, String methodName, String methodDesc
+    );
 
     private static boolean shouldHookMethodEnter(
             Class<?> klass,
@@ -149,4 +172,6 @@ public class Bootstrap {
             }
         }
     }
+
+    private static native void notifyHookClass(Class<?> c);
 }

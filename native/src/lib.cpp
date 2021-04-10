@@ -8,6 +8,9 @@
 #include <cstring>
 #include "utils.h"
 #include "CallParameter.h"
+#include <map>
+#include <vector>
+#include <algorithm>
 
 
 static JavaVM *javaVm = null;
@@ -29,6 +32,33 @@ static jmethodID methodCallImplInit;
 
 extern jobject extClassLoader;
 
+bool shouldNotHookJvmClasses = true;
+
+struct cmp_str {
+    bool operator()(char const *a, char const *b) const {
+        return std::strcmp(a, b) < 0;
+    }
+};
+// <MethodDeclaredClass, <MethodName , MethodDesc>  >
+#define HOOK_VEC std::vector<const char *>
+#define HOOK_METHOD_MAP std::map<const char *, HOOK_VEC*, cmp_str>
+#define HOOK_MAP std::map<const char *, HOOK_METHOD_MAP*, cmp_str>
+
+HOOK_MAP HOOKS;
+
+bool contains(HOOK_VEC *vec, const char *v) {
+    for (const char *a : *vec) {
+        if (std::strcmp(a, v) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+struct HookInvokingInfo {
+    bool runningHook;
+    bool exitingMethod;
+};
 
 void init_ArgumentNative(JNIEnv *env, jvmtiEnv *jtiEnv);
 
@@ -55,6 +85,40 @@ jclass getDeclaredClass(jmethodID met) {
     return c;
 }
 
+bool shouldRunHook(
+        const char *className,
+        const char *methodName,
+        const char *methodDesc
+) {
+    auto hookedMethods = HOOKS.find(className);
+    if (hookedMethods == HOOKS.end()) {
+        return false;
+    }
+    auto nameMapping = hookedMethods->second;
+    auto byNameResult = nameMapping->find(methodName);
+    if (byNameResult == nameMapping->end()) {
+        return false;
+    }
+    auto hooks = byNameResult->second;
+    if (!contains(hooks, methodDesc)) {
+        return false;
+    }
+    return true;
+}
+
+HookInvokingInfo *getHookInvokingInfo(jvmtiEnv *jvmti_env, jthread thread) {
+    HookInvokingInfo *info;
+    jvmti_env->GetThreadLocalStorage(thread, reinterpret_cast<void **>(&info));
+    if (info == null) {
+        info = new HookInvokingInfo;
+        std::cout << "NTT HII " << std::endl;
+        jvmti_env->SetThreadLocalStorage(thread, info);
+        info->runningHook = false;
+        info->exitingMethod = false;
+    }
+    return info;
+}
+
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "bugprone-misplaced-widening-cast"
 
@@ -64,12 +128,16 @@ JNICALL void onMethodEntry(
         jthread thread,
         jmethodID method
 ) {
+    auto invokingInfo = getHookInvokingInfo(jvmti_env, thread);
+    if (invokingInfo->runningHook) {
+        return;
+    }
 
     jobject classLoaderZ;
     jclass methodOwner;
     jvmti_env->GetMethodDeclaringClass(method, &methodOwner);
     jvmti_env->GetClassLoader(methodOwner, &classLoaderZ);
-    if (classLoaderZ == null) return;
+    if (shouldNotHookJvmClasses && classLoaderZ == null) return;
     if (jni_env->IsSameObject(classLoaderZ, classLoaderX)) return;
     if (jni_env->IsSameObject(classLoaderZ, extClassLoader)) return;
 
@@ -78,22 +146,21 @@ JNICALL void onMethodEntry(
     jvmti_env->GetMethodName(method, &methodName, &methodDesc, null);
     jint modifiers;
     jvmti_env->GetMethodModifiers(method, &modifiers);
-    jstring metName0 = jni_env->NewStringUTF(methodName);
-    jstring metDesc0 = jni_env->NewStringUTF(methodDesc);
 
-    //std::cout << "[NATIVE] Method " << cln << methodName << methodDesc << " invoked." << std::endl;
-
-    jclass bridgeClass;
-    jvmti_env->GetMethodDeclaringClass(shouldHookMethodEnter, &bridgeClass);
-
-
-    jboolean hook = jni_env->CallStaticBooleanMethod(
-            bridgeClass, shouldHookMethodEnter,
-            methodOwner, classLoaderZ,
-            metName0, metDesc0, modifiers
-    );
+    bool hook = shouldRunHook(cln, methodName, methodDesc);
     //std::cout << "HOOK CALL: " << hook << std::endl;
+    invokingInfo->runningHook = true;
     if (hook) {
+
+        jstring metName0 = jni_env->NewStringUTF(methodName);
+        jstring metDesc0 = jni_env->NewStringUTF(methodDesc);
+
+        //std::cout << "[NATIVE] Method " << cln << methodName << methodDesc << " invoked." << std::endl;
+
+        jclass bridgeClass;
+        jvmti_env->GetMethodDeclaringClass(shouldHookMethodEnter, &bridgeClass);
+
+
         int slots = 0, size = 0;
         //std::cout << "MDSC: " << methodDesc << std::endl;
         size_t end = indexOf(methodDesc, ')', 1);
@@ -306,6 +373,7 @@ JNICALL void onMethodEntry(
         //std::cout << "S3" << std::endl;
 
     }
+    invokingInfo->runningHook = false;
 
     //std::cout << "OOE" << std::endl;
 
@@ -319,13 +387,10 @@ JNICALL void onMethodExit(jvmtiEnv *jvmti_env,
                           jmethodID method,
                           jboolean was_popped_by_exception,
                           jvalue return_value) {
-    {
-        void *a;
-        jvmti_env->GetThreadLocalStorage(thread, &a);
-        if (a != null) {
-            jvmti_env->SetThreadLocalStorage(thread, null);
-            return;
-        }
+    auto invokingInfo = getHookInvokingInfo(jvmti_env, thread);
+    if (invokingInfo->exitingMethod) {
+        invokingInfo->exitingMethod = false;
+        return;
     }
 
     jclass methodDeclaredClass;
@@ -334,16 +399,18 @@ JNICALL void onMethodExit(jvmtiEnv *jvmti_env,
     jvmti_env->GetClassLoader(methodDeclaredClass, &metClassloader);
 
 
-    if (metClassloader == null) return;
+    if (shouldNotHookJvmClasses && metClassloader == null) return;
     if (jni_env->IsSameObject(metClassloader, classLoaderX)) return;
     if (jni_env->IsSameObject(metClassloader, extClassLoader)) return;
 
     // jthrowable jthr = jni_env->ExceptionOccurred();
 
-    char *methodDesc, *methodName;
+    char *methodDesc, *methodName, *methodClassName;
     jvmti_env->GetMethodName(method, &methodName, &methodDesc, null);
+    jvmti_env->GetClassSignature(methodDeclaredClass, &methodClassName, null);
     jint modifiers;
     jvmti_env->GetMethodModifiers(method, &modifiers);
+    if (!shouldRunHook(methodClassName, methodName, methodDesc)) return;
 
     jclass bridgeClass;
     jvmti_env->GetMethodDeclaringClass(shouldHookMethodEnter, &bridgeClass);
@@ -362,11 +429,12 @@ JNICALL void onMethodExit(jvmtiEnv *jvmti_env,
     );
 
     if (jni_env->ExceptionOccurred() != null) {
-        jvmti_env->SetThreadLocalStorage(thread, jtiEnv);
+        invokingInfo->exitingMethod = true;
     }
 
     if (returnForce.edited) {
-        jvmti_env->SetThreadLocalStorage(thread, jtiEnv);
+        invokingInfo->exitingMethod = true;
+
         switch (methodDesc[indexOf(methodDesc, ')', 0) + 1]) {
             case JVM_SIGNATURE_CLASS:
             case JVM_SIGNATURE_ARRAY: {
@@ -406,6 +474,18 @@ JNICALL void onMethodExit(jvmtiEnv *jvmti_env,
     clearForceEarlyReturnNativeAddress(jni_env, cc);
 }
 
+JNICALL void onThreadDeath(
+        jvmtiEnv *jvmti_env,
+        JNIEnv *jni_env,
+        jthread thread) {
+
+    HookInvokingInfo *info;
+    jvmti_env->GetThreadLocalStorage(thread, reinterpret_cast<void **>(&info));
+    if (info != null) {
+        free(info);
+    }
+}
+
 JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *vm, char *options, void *reserved) {
     //std::cout << "OnLoad called" << std::endl;
 
@@ -436,11 +516,13 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *vm, char *options, void *reserved) {
     memset(&callbacks, 0, sizeof callbacks);
     callbacks.MethodEntry = onMethodEntry;
     callbacks.MethodExit = onMethodExit;
+    callbacks.ThreadEnd = onThreadDeath;
 
     if (jtiEnv->SetEventCallbacks(&callbacks, sizeof callbacks) != JNI_OK) {
         std::cerr << "Set callbacks failed" << std::endl;
         return JVMTI_ERROR_INTERNAL;
     }
+    jtiEnv->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_THREAD_END, null);
 
     return JVMTI_ERROR_NONE;
 
@@ -506,3 +588,89 @@ JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_Bootstrap_initializ
             JVMTI_EVENT_METHOD_EXIT,
             null /* all threads */);
 }
+
+// region registerHooks
+
+/*
+ * Class:     io_github_karlatemp_jvmhook_core_Bootstrap
+ * Method:    registerHook0
+ * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+ */
+JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_Bootstrap_registerHook0
+        (JNIEnv *env, jclass, jstring cName, jstring mName, jstring mDesc) {
+    auto cName0 = env->GetStringUTFChars(cName, null);
+    auto mName0 = env->GetStringUTFChars(mName, null);
+    auto mDesc0 = env->GetStringUTFChars(mDesc, null);
+
+    HOOK_VEC *hooks;
+    auto methodHooks = HOOKS.find(cName0);
+    if (methodHooks == HOOKS.end()) {
+        auto subm = new HOOK_METHOD_MAP;
+
+        hooks = new HOOK_VEC;
+
+        subm->insert(std::pair<const char *, HOOK_VEC *>(mName0, hooks));
+        HOOKS.insert(std::pair<const char *, HOOK_METHOD_MAP *>(cName0, subm));
+    } else {
+
+        auto methodMap = methodHooks->second;
+        auto ve3c = methodMap->find(mName0);
+        if (ve3c == methodMap->end()) {
+            hooks = new HOOK_VEC;
+            methodMap->insert(std::pair<const char *, HOOK_VEC *>(mName0, hooks));
+        } else {
+            hooks = ve3c->second;
+
+        }
+    }
+    hooks->push_back(mDesc0);
+}
+
+/*
+ * Class:     io_github_karlatemp_jvmhook_core_Bootstrap
+ * Method:    registerHook0
+ * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+ */
+JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_Bootstrap_unregisterHook0
+        (JNIEnv *env, jclass, jstring cName, jstring mName, jstring mDesc) {
+    auto cName0 = env->GetStringUTFChars(cName, null);
+    auto mName0 = env->GetStringUTFChars(mName, null);
+    auto mDesc0 = env->GetStringUTFChars(mDesc, null);
+
+    auto methodTableRef = HOOKS.find(cName0);
+    if (methodTableRef == HOOKS.end()) return;
+
+    auto methodTable = methodTableRef->second;
+    auto methodDescRef = methodTable->find(mName0);
+    if (methodDescRef == methodTable->end()) return;
+
+    auto vecP = methodDescRef->second;
+    auto vec = *vecP;
+    for (auto pointer = vec.begin(); pointer < vec.end(); pointer++) {
+        if (strcmp(*pointer, mDesc0) == 0) {
+            vecP->erase(pointer);
+            break;
+        }
+    }
+
+    if (!vecP->empty()) return;
+    methodTable->erase(mName0);
+
+    if (!methodTable->empty()) return;
+    HOOKS.erase(cName0);
+}
+/*
+ * Class:     io_github_karlatemp_jvmhook_core_Bootstrap
+ * Method:    notifyHookClass
+ * Signature: (Ljava/lang/Class;)V
+ */
+JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_Bootstrap_notifyHookClass
+        (JNIEnv *, jclass, jclass c) {
+    jobject ccl;
+    jtiEnv->GetClassLoader(c, &ccl);
+    if (ccl == null) {
+        shouldNotHookJvmClasses = false;
+    }
+}
+
+// endregion

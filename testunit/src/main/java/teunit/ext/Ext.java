@@ -69,6 +69,10 @@ public class Ext {
         instance.registerHook(TestRun.class.getMethod("main", String[].class), call -> {
             dumpStack("Call by Reflection register");
         });
+        instance.registerHook(Thread.class.getMethod("dumpStack"), call -> {
+            call.earlyReturn().returnVoid();
+            new Exception("Injected Thread dump").printStackTrace(System.out);
+        });
 
     }
 }

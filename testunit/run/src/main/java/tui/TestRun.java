@@ -54,6 +54,7 @@ public class TestRun {
             e.printStackTrace(System.out);
         }
         error1();
+        Thread.dumpStack();
         System.out.println("Completed");
     }
 }

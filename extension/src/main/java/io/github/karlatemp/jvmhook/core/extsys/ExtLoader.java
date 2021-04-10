@@ -6,6 +6,9 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
+import java.security.AllPermission;
+import java.security.CodeSource;
+import java.security.PermissionCollection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipEntry;
@@ -44,7 +47,16 @@ public class ExtLoader {
         URLClassLoader ucl = new URLClassLoader(
                 urls.toArray(new URL[0]),
                 ExtLoader.class.getClassLoader()
-        );
+        ) {
+            @Override
+            protected PermissionCollection getPermissions(CodeSource codesource) {
+                AllPermission ap = new AllPermission();
+                PermissionCollection collection = ap.newPermissionCollection();
+                collection.add(ap);
+                collection.setReadOnly();
+                return collection;
+            }
+        };
         NativeBridge.setExtClassLoader(ucl);
         for (File jar : jars) {
             try (ZipFile zip = new ZipFile(jar)) {

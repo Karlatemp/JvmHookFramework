@@ -1,7 +1,9 @@
 #include <io_github_karlatemp_jvmhook_core_extsys_NativeBridge.h>
+#include <iostream>
 #include "lib.h"
 
 jobject extClassLoader = null;
+extern jvmtiEnv *jtiEnv;
 
 /*
  * Class:     io_github_karlatemp_jvmhook_core_extsys_NativeBridge
@@ -28,5 +30,9 @@ JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_extsys_NativeBridge
         env->CallStaticVoidMethod(target, m);
     } else {
         env->ExceptionClear();
+        char *name;
+        jtiEnv->GetClassSignature(target, &name, null);
+        std::cerr << "[JvmHookFramework] [Extension] No method 'static void load()' in " << name << std::endl;
+        std::cerr << "[JvmHookFramework] [Extension] This extension will not being loaded." << std::endl;
     }
 }

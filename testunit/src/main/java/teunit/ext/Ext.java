@@ -68,6 +68,7 @@ public class Ext {
         });
         instance.registerHook(TestRun.class.getMethod("main", String[].class), call -> {
             dumpStack("Call by Reflection register");
+            System.out.println(call.methodInfo().toMethod());
         });
         instance.registerHook(Thread.class.getMethod("dumpStack"), call -> {
             call.earlyReturn().returnVoid();

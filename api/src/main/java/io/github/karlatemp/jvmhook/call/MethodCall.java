@@ -13,6 +13,8 @@ public interface MethodCall {
 
     ForceEarlyReturn earlyReturn();
 
+    MethodInfo methodInfo();
+
     public interface ForceEarlyReturn {
         void returnVoid();
 

@@ -78,6 +78,15 @@ jobject new_JvmReturnValueImpl(
 
 void release_JvmReturnValueImpl(JNIEnv *jniEnv, jobject obj);
 
+void init_MethodInfoImpl(JNIEnv *jni);
+
+jobject new_MethodInfoImpl(
+        JNIEnv *, jvmtiEnv *, jclass, jmethodID *,
+        jstring, jstring, jint
+);
+
+void release_MethodInfoImpl(JNIEnv *jni, jobject o);
+
 
 jclass getDeclaredClass(jmethodID met) {
     jclass c;
@@ -288,18 +297,22 @@ JNICALL void onMethodEntry(
 
         //std::cout << "S2Bx " << methodCallImplInit << std::endl;
         auto forceERN = newForceEarlyReturnNative(jni_env, &returnForce);
+
+        auto inf = new_MethodInfoImpl(jni_env, jvmti_env, methodOwner, &method, metName0, metDesc0, modifiers);
         auto call = jni_env->NewObject(
                 c,
                 methodCallImplInit,
                 methodOwner, metName0, metDesc0,
                 modifiers, anc,
-                forceERN
+                forceERN,
+                inf
         );
         //std::cout << "S2B" << std::endl;
 
         jni_env->CallStaticVoidMethod(bridgeClass, broadcastMethodEnter, call);
 
         clearForceEarlyReturnNativeAddress(jni_env, forceERN);
+        release_MethodInfoImpl(jni_env, inf);
         //std::cout << "SB" << std::endl;
         jni_env->SetLongField(anc, ArgumentsNativeClass$address, (jlong) 0);
         //std::cout << "SMB" << std::endl;
@@ -422,11 +435,17 @@ JNICALL void onMethodExit(jvmtiEnv *jvmti_env,
     auto cc = newForceEarlyReturnNative(jni_env, &returnForce);
 
     auto retV = new_JvmReturnValueImpl(jni_env, jvmti_env, was_popped_by_exception, null, &return_value);
-
+    auto metInfo = new_MethodInfoImpl(
+            jni_env, jvmti_env, methodDeclaredClass, &method, methodNameJ, methodDescJ,
+            modifiers
+    );
     jni_env->CallStaticVoidMethod(
             bridgeClass, broadcastMethodExit,
-            methodDeclaredClass, methodNameJ, methodDescJ, modifiers, cc, retV
+            methodDeclaredClass, methodNameJ, methodDescJ, modifiers, cc, retV,
+            metInfo
     );
+    release_JvmReturnValueImpl(jni_env, retV);
+    release_MethodInfoImpl(jni_env, metInfo);
 
     if (jni_env->ExceptionOccurred() != null) {
         invokingInfo->exitingMethod = true;
@@ -554,19 +573,20 @@ JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_Bootstrap_initializ
         );
         broadcastMethodExit = env->GetStaticMethodID(
                 owner, "broadcastMethodExit",
-                "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;ILio/github/karlatemp/jvmhook/call/MethodCall$ForceEarlyReturn;Lio/github/karlatemp/jvmhook/call/MethodReturnValue;)V"
+                "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;ILio/github/karlatemp/jvmhook/call/MethodCall$ForceEarlyReturn;Lio/github/karlatemp/jvmhook/call/MethodReturnValue;Lio/github/karlatemp/jvmhook/call/MethodInfo;)V"
         );
 
         jclass MethodCallImpl = env->FindClass("io/github/karlatemp/jvmhook/core/MethodCallImpl");
         methodCallImplInit = env->GetMethodID(
                 MethodCallImpl, "<init>",
-                "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;ILio/github/karlatemp/jvmhook/call/Arguments;Lio/github/karlatemp/jvmhook/call/MethodCall$ForceEarlyReturn;)V"
+                "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;ILio/github/karlatemp/jvmhook/call/Arguments;Lio/github/karlatemp/jvmhook/call/MethodCall$ForceEarlyReturn;Lio/github/karlatemp/jvmhook/call/MethodInfo;)V"
         );
 
     }
     init_ArgumentNative(env, jtiEnv);
     init_ForceEarlyReturnNative(env, jtiEnv);
     init_JvmReturnValueImpl(env, jtiEnv);
+    init_MethodInfoImpl(env);
     {
         auto e = env->ExceptionOccurred();
         auto extCl = env->FindClass("io/github/karlatemp/jvmhook/core/extsys/ExtLoader");

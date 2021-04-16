@@ -3,6 +3,7 @@ package io.github.karlatemp.jvmhook.core;
 import io.github.karlatemp.jvmhook.JvmHookFramework;
 import io.github.karlatemp.jvmhook.call.MethodCall;
 import io.github.karlatemp.jvmhook.call.MethodHook;
+import io.github.karlatemp.jvmhook.call.MethodInfo;
 import io.github.karlatemp.jvmhook.call.MethodReturnValue;
 import io.github.karlatemp.unsafeaccessor.Unsafe;
 
@@ -154,8 +155,10 @@ public class Bootstrap {
     }
 
     private static void broadcastMethodExit(
-            Class<?> c, String n, String desc, int modifier, MethodCall.ForceEarlyReturn fer,
-            MethodReturnValue mrv
+            Class<?> c, String n, String desc, int modifier,
+            MethodCall.ForceEarlyReturn fer,
+            MethodReturnValue mrv,
+            MethodInfo mi
     ) throws Throwable {
 
         Map<String, Map<String, Queue<MethodHook>>> tables = getTables(c, false);
@@ -165,7 +168,7 @@ public class Bootstrap {
         Queue<MethodHook> hooks = queueMap.get(desc);
         if (hooks != null) {
             MethodCall mc = new MethodCallImpl(
-                    c, n, desc, modifier, NoopArguments.I, fer
+                    c, n, desc, modifier, NoopArguments.I, fer, mi
             );
             for (MethodHook hook : hooks) {
                 hook.postInvoke(mc, mrv);

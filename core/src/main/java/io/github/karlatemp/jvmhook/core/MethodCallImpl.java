@@ -2,6 +2,7 @@ package io.github.karlatemp.jvmhook.core;
 
 import io.github.karlatemp.jvmhook.call.Arguments;
 import io.github.karlatemp.jvmhook.call.MethodCall;
+import io.github.karlatemp.jvmhook.call.MethodInfo;
 
 class MethodCallImpl implements MethodCall {
     private final Class<?> owner;
@@ -10,6 +11,7 @@ class MethodCallImpl implements MethodCall {
     private final int modifiers;
     private final Arguments args;
     private final ForceEarlyReturn fer;
+    private final MethodInfo mi;
 
     MethodCallImpl(
             Class<?> owner,
@@ -17,7 +19,8 @@ class MethodCallImpl implements MethodCall {
             String metDesc,
             int modifiers,
             Arguments args,
-            ForceEarlyReturn fer
+            ForceEarlyReturn fer,
+            MethodInfo mi
     ) {
         this.owner = owner;
         this.metName = metName;
@@ -25,6 +28,7 @@ class MethodCallImpl implements MethodCall {
         this.modifiers = modifiers;
         this.args = args;
         this.fer = fer;
+        this.mi = mi;
         // Thread.dumpStack();
     }
 
@@ -56,5 +60,10 @@ class MethodCallImpl implements MethodCall {
     @Override
     public ForceEarlyReturn earlyReturn() {
         return fer;
+    }
+
+    @Override
+    public MethodInfo methodInfo() {
+        return mi;
     }
 }

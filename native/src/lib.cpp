@@ -120,7 +120,7 @@ HookInvokingInfo *getHookInvokingInfo(jvmtiEnv *jvmti_env, jthread thread) {
     jvmti_env->GetThreadLocalStorage(thread, reinterpret_cast<void **>(&info));
     if (info == null) {
         info = new HookInvokingInfo;
-        std::cout << "NTT HII " << std::endl;
+        // std::cout << "NTT HII " << std::endl;
         jvmti_env->SetThreadLocalStorage(thread, info);
         info->runningHook = false;
         info->exitingMethod = false;

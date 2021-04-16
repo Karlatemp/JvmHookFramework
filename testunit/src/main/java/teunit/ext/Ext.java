@@ -16,7 +16,7 @@ public class Ext {
     }
 
     private static void load() throws Throwable {
-        System.out.println("Loaded");
+        dumpStack("Loaded TestExt");
         JvmHookFramework instance = JvmHookFramework.INSTANCE;
         instance.registerHook(TestRun.class, "error", "()V",
                 call -> call.earlyReturn().returnVoid()

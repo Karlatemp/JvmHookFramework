@@ -4,7 +4,10 @@ import io.github.karlatemp.jvmhook.JvmHookFramework;
 import io.github.karlatemp.jvmhook.call.MethodCall;
 import io.github.karlatemp.jvmhook.call.MethodHook;
 import io.github.karlatemp.jvmhook.call.MethodReturnValue;
+import io.github.karlatemp.unsafeaccessor.Unsafe;
 import tui.TestRun;
+
+import java.lang.reflect.Method;
 
 public class Ext {
     private static void dumpStack() {
@@ -72,7 +75,7 @@ public class Ext {
         });
         instance.registerHook(Thread.class.getMethod("dumpStack"), call -> {
             call.earlyReturn().returnVoid();
-            new Exception("Injected Thread dump").printStackTrace(System.out);
+            dumpStack("Injected Thread dump");
         });
 
     }

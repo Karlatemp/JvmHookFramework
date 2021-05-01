@@ -1,11 +1,10 @@
 plugins {
     id 'java'
+    id 'java-library'
 }
 
 dependencies {
-    implementation project(':api')
-    implementation group: 'io.github.karlatemp', name: 'unsafe-accessor', version: '1.4.0'
-
+    api project(':api')
 }
 
 task runTest(type: JavaExec) {

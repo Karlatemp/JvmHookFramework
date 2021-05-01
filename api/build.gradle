@@ -1,8 +1,9 @@
 plugins {
     id 'java'
+    id 'java-library'
 }
 
 dependencies {
     // https://mvnrepository.com/artifact/io.github.karlatemp/unsafe-accessor
-    implementation group: 'io.github.karlatemp', name: 'unsafe-accessor', version: '1.5.0'
+    api group: 'io.github.karlatemp', name: 'unsafe-accessor', version: '1.5.0'
 }

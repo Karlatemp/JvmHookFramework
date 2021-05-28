@@ -1,9 +1,58 @@
 plugins {
     id 'java'
     id 'java-library'
+    id 'io.github.karlatemp.publication-sign'
+    id("maven-publish")
 }
 
 dependencies {
     // https://mvnrepository.com/artifact/io.github.karlatemp/unsafe-accessor
     api group: 'io.github.karlatemp', name: 'unsafe-accessor', version: '1.5.0'
+}
+
+
+tasks.create("sourcesJar", Jar.class) { tsk ->
+    tsk.dependsOn("classes")
+    tsk.archiveClassifier.set('sources')
+    tsk.from project.sourceSets.main.allSource
+}
+tasks.create("javadocJar", Jar.class) { tsk ->
+    tsk.archiveClassifier.set('javadoc')
+}
+
+def project0 = project
+
+publishing {
+    publications { container ->
+        register('api', MavenPublication.class) { publication ->
+            publication.from(project.components.java)
+
+            publication.setModuleDescriptorGenerator(null)
+            publication.artifact(project0.tasks.sourcesJar)
+            publication.artifact(project0.tasks.javadocJar)
+
+            publication.pom {
+                name = 'JvmHookFramework'
+                description = 'Jvm Hook Framework - API'
+                url = 'https://github.com/Karlatemp/JvmHookFramework'
+                licenses {
+                    license {
+                        name = 'Apache License'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0'
+                    }
+                }
+                developers {
+                    developer {
+                        name = 'Karlatemp'
+                        email = 'karlatemp@vip.qq.com'
+                    }
+                }
+                scm {
+                    url = 'https://github.com/Karlatemp/JvmHookFramework.git'
+                    connection = 'https://github.com/Karlatemp/JvmHookFramework.git'
+                }
+            }
+        }
+
+    }
 }

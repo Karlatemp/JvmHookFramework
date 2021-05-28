@@ -42,7 +42,10 @@ java ....
 
 # 开发扩展
 
-把 `Jars.zip > api.jar` 加进你的依赖.
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.karlatemp.jvm-hook-framework/api.svg?label=api%20on%20Maven%20Central)](https://search.maven.org/search?q=io.github.karlatemp.jvm-hook-framework)
+
+添加依赖 `io.github.karlatemp.jvm-hook-framework:api` (最新版本)
+
 使用 `io.github.karlatemp.jvmhook.JvmHookFramework` 注册挂钩
 
 构建的 jar 里需要存在一个名为 `jvm-hook-ext.txt` 且内容为扩展主类的全名称 的文件

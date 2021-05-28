@@ -46,7 +46,10 @@ java ....
 
 # Develop extension
 
-Add `Jars.zip > api.jar` into dependencies.
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.karlatemp.jvm-hook-framework/api.svg?label=api%20on%20Maven%20Central)](https://search.maven.org/search?q=io.github.karlatemp.jvm-hook-framework)
+
+Depend on the latest version of `io.github.karlatemp.jvm-hook-framework:api`
+
 Use `io.github.karlatemp.jvmhook.JvmHookFramework` to register hooks
 
 Built jar need contains a file named `jvm-hook-ext.txt` that contains ExtMainClass.

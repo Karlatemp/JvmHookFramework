@@ -8,6 +8,7 @@ import io.github.karlatemp.jvmhook.call.MethodReturnValue;
 import io.github.karlatemp.unsafeaccessor.Unsafe;
 
 import java.lang.instrument.Instrumentation;
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.HashMap;
@@ -24,9 +25,16 @@ public class Bootstrap {
         unsafe = Unsafe.getUnsafe();
         initializeBridge();
         initializeNative();
+        {
+            MethodHandles.Lookup lk = MethodHandles.lookup();
+            initLookupFieldOffset(lk, lk.lookupClass());
+        }
+        initializeExts();
     }
 
     private static native void initializeNative();
+
+    private static native void initializeExts();
 
     private static class JvmHookFrameworkBridge extends JvmHookFramework {
         @Override
@@ -158,7 +166,8 @@ public class Bootstrap {
             Class<?> c, String n, String desc, int modifier,
             MethodCall.ForceEarlyReturn fer,
             MethodReturnValue mrv,
-            MethodInfo mi
+            MethodInfo mi,
+            Class<?> caller
     ) throws Throwable {
 
         Map<String, Map<String, Queue<MethodHook>>> tables = getTables(c, false);
@@ -167,9 +176,10 @@ public class Bootstrap {
         if (queueMap == null) return;
         Queue<MethodHook> hooks = queueMap.get(desc);
         if (hooks != null) {
-            MethodCall mc = new MethodCallImpl(
+            MethodCallImpl mc = new MethodCallImpl(
                     c, n, desc, modifier, NoopArguments.I, fer, mi
             );
+            mc.caller = caller;
             for (MethodHook hook : hooks) {
                 hook.postInvoke(mc, mrv);
             }
@@ -177,4 +187,9 @@ public class Bootstrap {
     }
 
     private static native void notifyHookClass(Class<?> c);
+
+    private static native void initLookupFieldOffset(MethodHandles.Lookup lookup, Class<?> owner);
+
+    /*package-private*/
+    static native void changeOwner(MethodHandles.Lookup lookup, Class<?> target);
 }

@@ -99,7 +99,7 @@ JNIEXPORT jdouble JNICALL Java_io_github_karlatemp_jvmhook_core_ArgumentsNative_
     if (p == null) return -1;
     if (index < getSize(env, thiz)) {
         auto px = p[index];
-        std::cout << "SST: " << px.type << " I " << index << std::endl;
+      //std::cout << "SST: " << px.type << " I " << index << std::endl;
         if (px.type != JVM_SIGNATURE_DOUBLE) {
             ile(env);
         } else {

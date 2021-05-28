@@ -1,7 +1,14 @@
 package io.github.karlatemp.jvmhook.call;
 
+import java.lang.invoke.MethodHandles;
+
 public interface MethodCall {
     Class<?> getMethodOwner();
+
+
+    MethodHandles.Lookup getMethodOwnerLookup();
+
+    Class<?> getMethodCaller();
 
     String getMethodName();
 

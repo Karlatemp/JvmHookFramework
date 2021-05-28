@@ -4,6 +4,9 @@ import io.github.karlatemp.jvmhook.call.Arguments;
 import io.github.karlatemp.jvmhook.call.MethodCall;
 import io.github.karlatemp.jvmhook.call.MethodInfo;
 
+import java.lang.annotation.Native;
+import java.lang.invoke.MethodHandles;
+
 class MethodCallImpl implements MethodCall {
     private final Class<?> owner;
     private final String metName;
@@ -12,6 +15,8 @@ class MethodCallImpl implements MethodCall {
     private final Arguments args;
     private final ForceEarlyReturn fer;
     private final MethodInfo mi;
+    @Native
+    Class<?> caller = null;
 
     MethodCallImpl(
             Class<?> owner,
@@ -35,6 +40,19 @@ class MethodCallImpl implements MethodCall {
     @Override
     public Class<?> getMethodOwner() {
         return owner;
+    }
+
+    @Override
+    public MethodHandles.Lookup getMethodOwnerLookup() {
+        MethodHandles.Lookup lk = MethodHandles.lookup();
+        Bootstrap.changeOwner(lk, owner);
+        return lk;
+    }
+
+    @SuppressWarnings("ConstantConditions")
+    @Override
+    public Class<?> getMethodCaller() {
+        return caller;
     }
 
     @Override

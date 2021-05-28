@@ -16,6 +16,8 @@
 static JavaVM *javaVm = null;
 jvmtiEnv *jtiEnv = null;
 
+// region fields
+
 extern jfieldID ArgumentsNativeClass$size;
 extern jfieldID ArgumentsNativeClass$address;
 extern jfieldID ArgumentsNativeClass$thisObj;
@@ -29,6 +31,9 @@ static jmethodID broadcastMethodExit;
 
 
 static jmethodID methodCallImplInit;
+static jfieldID methodCallImpl$caller;
+
+// endregion
 
 extern jobject extClassLoader;
 
@@ -60,6 +65,8 @@ struct HookInvokingInfo {
     bool exitingMethod;
 };
 
+// region initializers for other sources
+
 void init_ArgumentNative(JNIEnv *env, jvmtiEnv *jtiEnv);
 
 void init_ForceEarlyReturnNative(JNIEnv *env, jvmtiEnv *jtiEnv);
@@ -87,6 +94,7 @@ jobject new_MethodInfoImpl(
 
 void release_MethodInfoImpl(JNIEnv *jni, jobject o);
 
+// endregion
 
 jclass getDeclaredClass(jmethodID met) {
     jclass c;
@@ -128,6 +136,24 @@ HookInvokingInfo *getHookInvokingInfo(jvmtiEnv *jvmti_env, jthread thread) {
     return info;
 }
 
+jobject findCaller(jvmtiEnv *jvmti_env, JNIEnv *jniEnv, jthread thread) {
+    jvmtiFrameInfo frameInfo[1];
+    jint frameCount;
+    //std::cout << "Caller invoke" << std::endl;
+    auto err0 = jvmti_env->GetStackTrace(thread, 1, 1, frameInfo, &frameCount);
+    //std::cout << "Caller invoke complete, " << frameCount << std::endl;
+    if (err0 == JVMTI_ERROR_NONE && frameCount > 0) {
+        jclass resp = null;
+        //std::cout << "Fc" << std::endl;
+        jvmti_env->GetMethodDeclaringClass(frameInfo[0].method, &resp);
+        //std::cout << "EOF" << std::endl;
+        return resp;
+    } else {
+        //std::cout << "JTI: " << err0 << std::endl;
+    }
+    return null;
+}
+
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "bugprone-misplaced-widening-cast"
 
@@ -157,7 +183,6 @@ JNICALL void onMethodEntry(
     jvmti_env->GetMethodModifiers(method, &modifiers);
 
     bool hook = shouldRunHook(cln, methodName, methodDesc);
-    //std::cout << "HOOK CALL: " << hook << std::endl;
     invokingInfo->runningHook = true;
     if (hook) {
 
@@ -307,6 +332,9 @@ JNICALL void onMethodEntry(
                 forceERN,
                 inf
         );
+        auto caller = findCaller(jvmti_env, jni_env, thread);
+        //std::cout << "Caller: " << caller << std::endl;
+        jni_env->SetObjectField(call, methodCallImpl$caller, caller);
         //std::cout << "S2B" << std::endl;
 
         jni_env->CallStaticVoidMethod(bridgeClass, broadcastMethodEnter, call);
@@ -347,7 +375,7 @@ JNICALL void onMethodEntry(
         }
         //std::cout << "S2" << std::endl;
         if (returnForce.edited) {
-            // //std::cout << "RF EDX " << methodDesc[end + 1] << std::endl;
+            // std::cout << "RF EDX " << methodDesc[end + 1] << std::endl;
             switch (methodDesc[end + 1]) {
                 case JVM_SIGNATURE_CLASS:
                 case JVM_SIGNATURE_ARRAY: {
@@ -388,7 +416,6 @@ JNICALL void onMethodEntry(
     }
     invokingInfo->runningHook = false;
 
-    //std::cout << "OOE" << std::endl;
 
 }
 
@@ -439,10 +466,12 @@ JNICALL void onMethodExit(jvmtiEnv *jvmti_env,
             jni_env, jvmti_env, methodDeclaredClass, &method, methodNameJ, methodDescJ,
             modifiers
     );
+    auto caller = findCaller(jvmti_env, jni_env, thread);
+
     jni_env->CallStaticVoidMethod(
             bridgeClass, broadcastMethodExit,
             methodDeclaredClass, methodNameJ, methodDescJ, modifiers, cc, retV,
-            metInfo
+            metInfo, caller
     );
     release_JvmReturnValueImpl(jni_env, retV);
     release_MethodInfoImpl(jni_env, metInfo);
@@ -573,7 +602,7 @@ JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_Bootstrap_initializ
         );
         broadcastMethodExit = env->GetStaticMethodID(
                 owner, "broadcastMethodExit",
-                "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;ILio/github/karlatemp/jvmhook/call/MethodCall$ForceEarlyReturn;Lio/github/karlatemp/jvmhook/call/MethodReturnValue;Lio/github/karlatemp/jvmhook/call/MethodInfo;)V"
+                "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;ILio/github/karlatemp/jvmhook/call/MethodCall$ForceEarlyReturn;Lio/github/karlatemp/jvmhook/call/MethodReturnValue;Lio/github/karlatemp/jvmhook/call/MethodInfo;Ljava/lang/Class;)V"
         );
 
         jclass MethodCallImpl = env->FindClass("io/github/karlatemp/jvmhook/core/MethodCallImpl");
@@ -581,12 +610,20 @@ JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_Bootstrap_initializ
                 MethodCallImpl, "<init>",
                 "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;ILio/github/karlatemp/jvmhook/call/Arguments;Lio/github/karlatemp/jvmhook/call/MethodCall$ForceEarlyReturn;Lio/github/karlatemp/jvmhook/call/MethodInfo;)V"
         );
+        methodCallImpl$caller = env->GetFieldID(
+                MethodCallImpl, "caller", "Ljava/lang/Class;"
+        );
 
     }
     init_ArgumentNative(env, jtiEnv);
     init_ForceEarlyReturnNative(env, jtiEnv);
     init_JvmReturnValueImpl(env, jtiEnv);
     init_MethodInfoImpl(env);
+}
+
+JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_Bootstrap_initializeExts(
+        JNIEnv *env, jclass
+) {
     {
         auto e = env->ExceptionOccurred();
         auto extCl = env->FindClass("io/github/karlatemp/jvmhook/core/extsys/ExtLoader");
@@ -608,6 +645,7 @@ JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_Bootstrap_initializ
             JVMTI_EVENT_METHOD_EXIT,
             null /* all threads */);
 }
+
 
 // region registerHooks
 

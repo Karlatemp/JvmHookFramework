@@ -48,9 +48,9 @@ char readType(
             return desc[i];
         }
         case JVM_SIGNATURE_CLASS: {
-            //std::cout << "CCB " << (*begin) << std::endl;
+          //std::cout << "CCB " << (*begin) << std::endl;
             auto ind = (int) indexOf(desc, ';', *begin);
-            //std::cout << "CCI " << ind << std::endl;
+          //std::cout << "CCI " << ind << std::endl;
             if (ind == -1) ind = end;
             setV(begin, ind + 1);
             return JVM_SIGNATURE_CLASS;

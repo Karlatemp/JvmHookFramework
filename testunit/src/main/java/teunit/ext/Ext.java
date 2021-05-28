@@ -4,10 +4,7 @@ import io.github.karlatemp.jvmhook.JvmHookFramework;
 import io.github.karlatemp.jvmhook.call.MethodCall;
 import io.github.karlatemp.jvmhook.call.MethodHook;
 import io.github.karlatemp.jvmhook.call.MethodReturnValue;
-import io.github.karlatemp.unsafeaccessor.Unsafe;
 import tui.TestRun;
-
-import java.lang.reflect.Method;
 
 public class Ext {
     private static void dumpStack() {
@@ -72,10 +69,14 @@ public class Ext {
         instance.registerHook(TestRun.class.getMethod("main", String[].class), call -> {
             dumpStack("Call by Reflection register");
             System.out.println(call.methodInfo().toMethod());
+            System.out.println("Lookup: " + call.getMethodOwnerLookup());
+            if (call.getMethodCaller() != null) {
+                throw new AssertionError("Caller not null");
+            }
         });
         instance.registerHook(Thread.class.getMethod("dumpStack"), call -> {
             call.earlyReturn().returnVoid();
-            dumpStack("Injected Thread dump");
+            dumpStack("Injected Thread dump(caller = " + call.getMethodCaller() + ")");
         });
 
     }

@@ -20,6 +20,7 @@ public class Ext {
         System.out.println("MethodHook:         " + MethodHook.class.getClassLoader());
         JvmHookFramework instance = JvmHookFramework.INSTANCE;
         System.out.println("JvmHookFramework:   " + instance.getClass().getClassLoader());
+        System.out.println("F JVML:             " + JvmHookFramework.LOW_LEVEL_ACCESS.getClassLoader(Ext.class));
         instance.registerHook(TestRun.class, "error", "()V",
                 call -> call.earlyReturn().returnVoid()
         );

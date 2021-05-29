@@ -6,6 +6,7 @@ import io.github.karlatemp.jvmhook.call.MethodHook;
 import io.github.karlatemp.jvmhook.call.MethodInfo;
 import io.github.karlatemp.jvmhook.call.MethodReturnValue;
 import io.github.karlatemp.unsafeaccessor.Unsafe;
+import io.github.karlatemp.unsafeaccessor.UnsafeAccess;
 
 import java.lang.instrument.Instrumentation;
 import java.lang.invoke.MethodHandles;
@@ -20,10 +21,12 @@ import java.util.function.BiConsumer;
 
 public class Bootstrap {
     static final Unsafe unsafe;
+    static final UnsafeAccess unsafeAccess;
     static final WeakHashMap<Class<?>, Map<String, Map<String, Queue<MethodHook>>>> hooks = new WeakHashMap<>();
     static final ConcurrentLinkedDeque<BiConsumer<Class<?>, ClassLoader>> classPrepareLoadingHook = new ConcurrentLinkedDeque<>();
 
     static {
+        unsafeAccess = UnsafeAccess.getInstance();
         unsafe = Unsafe.getUnsafe();
         initializeBridge();
         initializeNative();
@@ -66,11 +69,17 @@ public class Bootstrap {
     private static void initializeBridge() {
         try {
             Field f = JvmHookFramework.class.getDeclaredField("INSTANCE");
+            Field f2 = JvmHookFramework.class.getDeclaredField("LOW_LEVEL_ACCESS");
             unsafe.ensureClassInitialized(JvmHookFramework.class);
             unsafe.putReference(
                     unsafe.staticFieldBase(f),
                     unsafe.staticFieldOffset(f),
                     new JvmHookFrameworkBridge()
+            );
+            unsafe.putReference(
+                    unsafe.staticFieldBase(f2),
+                    unsafe.staticFieldOffset(f2),
+                    new LowLevelAccess()
             );
         } catch (Exception e) {
             throw new Error(e);

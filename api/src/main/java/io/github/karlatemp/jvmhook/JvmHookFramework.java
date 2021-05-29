@@ -13,7 +13,11 @@ public abstract class JvmHookFramework {
     @Native
     public static final @NotNull JvmHookFramework INSTANCE = NIL();
 
-    static JvmHookFramework NIL() {
+    @SuppressWarnings("ConstantConditions")
+    @Native
+    public static final @NotNull JvmLowLevelAccess LOW_LEVEL_ACCESS = NIL();
+
+    static <T> T NIL() {
         return null;
     }
 

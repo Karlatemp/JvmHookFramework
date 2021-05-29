@@ -5,6 +5,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.lang.annotation.Native;
 import java.lang.reflect.Method;
+import java.util.function.BiConsumer;
 
 public abstract class JvmHookFramework {
 
@@ -22,6 +23,14 @@ public abstract class JvmHookFramework {
 
     public abstract void unregisterHook(
             Class<?> target, String methodName, String methodDesc, MethodHook hook
+    );
+
+    public abstract void registerClassPrepareHook(
+            BiConsumer<Class<?>, ClassLoader> hook
+    );
+
+    public abstract void unregisterClassPrepareHook(
+            BiConsumer<Class<?>, ClassLoader> hook
     );
 
     protected abstract String getMethodDesc(Method method);

@@ -28,6 +28,7 @@ static jmethodID shouldHookMethodEnter;
 
 static jmethodID broadcastMethodEnter;
 static jmethodID broadcastMethodExit;
+static jmethodID broadcastClassPrepare;
 
 
 static jmethodID methodCallImplInit;
@@ -63,6 +64,7 @@ bool contains(HOOK_VEC *vec, const char *v) {
 struct HookInvokingInfo {
     bool runningHook;
     bool exitingMethod;
+    bool broadcastingMethodPrepareLoad;
 };
 
 // region initializers for other sources
@@ -174,7 +176,7 @@ JNICALL void onMethodEntry(
     jvmti_env->GetClassLoader(methodOwner, &classLoaderZ);
     if (shouldNotHookJvmClasses && classLoaderZ == null) return;
     if (jni_env->IsSameObject(classLoaderZ, classLoaderX)) return;
-    if (jni_env->IsSameObject(classLoaderZ, extClassLoader)) return;
+    if (extClassLoader != null && jni_env->IsSameObject(classLoaderZ, extClassLoader)) return;
 
     char *cln, *methodDesc, *methodName;
     jvmti_env->GetClassSignature(methodOwner, &cln, null);
@@ -196,6 +198,7 @@ JNICALL void onMethodEntry(
 
 
         int slots = 0, size = 0;
+        if ((modifiers & JVM_ACC_STATIC) == 0) { slots++; }
         //std::cout << "MDSC: " << methodDesc << std::endl;
         size_t end = indexOf(methodDesc, ')', 1);
         //std::cout << "END: " << end << std::endl;
@@ -441,7 +444,7 @@ JNICALL void onMethodExit(jvmtiEnv *jvmti_env,
 
     if (shouldNotHookJvmClasses && metClassloader == null) return;
     if (jni_env->IsSameObject(metClassloader, classLoaderX)) return;
-    if (jni_env->IsSameObject(metClassloader, extClassLoader)) return;
+    if (extClassLoader != null && jni_env->IsSameObject(metClassloader, extClassLoader)) return;
 
     // jthrowable jthr = jni_env->ExceptionOccurred();
 
@@ -534,6 +537,29 @@ JNICALL void onThreadDeath(
     }
 }
 
+JNICALL void onClassPrepare(
+        jvmtiEnv *jvmti_env,
+        JNIEnv *jni_env,
+        jthread thread,
+        jclass klass
+) {
+    auto hookinfo = getHookInvokingInfo(jvmti_env, thread);
+    if (hookinfo->runningHook) return;
+
+    jobject klassLoader;
+    jvmti_env->GetClassLoader(klass, &klassLoader);
+    if (klassLoader == null)return;
+    if (jni_env->IsSameObject(klassLoader, classLoaderX)) return;
+    if (jni_env->IsSameObject(klassLoader, extClassLoader)) return;
+    hookinfo->runningHook = true;
+
+    jclass bridgeClass;
+    jtiEnv->GetMethodDeclaringClass(broadcastClassPrepare, &bridgeClass);
+    jni_env->CallStaticVoidMethod(bridgeClass, broadcastClassPrepare, klass, klassLoader);
+
+    hookinfo->runningHook = false;
+}
+
 JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *vm, char *options, void *reserved) {
     //std::cout << "OnLoad called" << std::endl;
 
@@ -565,6 +591,7 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *vm, char *options, void *reserved) {
     callbacks.MethodEntry = onMethodEntry;
     callbacks.MethodExit = onMethodExit;
     callbacks.ThreadEnd = onThreadDeath;
+    callbacks.ClassPrepare = onClassPrepare;
 
     if (jtiEnv->SetEventCallbacks(&callbacks, sizeof callbacks) != JNI_OK) {
         std::cerr << "Set callbacks failed" << std::endl;
@@ -604,6 +631,10 @@ JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_Bootstrap_initializ
                 owner, "broadcastMethodExit",
                 "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;ILio/github/karlatemp/jvmhook/call/MethodCall$ForceEarlyReturn;Lio/github/karlatemp/jvmhook/call/MethodReturnValue;Lio/github/karlatemp/jvmhook/call/MethodInfo;Ljava/lang/Class;)V"
         );
+        broadcastClassPrepare = env->GetStaticMethodID(
+                owner, "broadcastClassPrepare",
+                "(Ljava/lang/Class;Ljava/lang/ClassLoader;)V"
+        );
 
         jclass MethodCallImpl = env->FindClass("io/github/karlatemp/jvmhook/core/MethodCallImpl");
         methodCallImplInit = env->GetMethodID(
@@ -624,6 +655,10 @@ JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_Bootstrap_initializ
 JNIEXPORT void JNICALL Java_io_github_karlatemp_jvmhook_core_Bootstrap_initializeExts(
         JNIEnv *env, jclass
 ) {
+    jtiEnv->SetEventNotificationMode(
+            JVMTI_ENABLE,
+            JVMTI_EVENT_CLASS_PREPARE,
+            null /* all threads */);
     {
         auto e = env->ExceptionOccurred();
         auto extCl = env->FindClass("io/github/karlatemp/jvmhook/core/extsys/ExtLoader");

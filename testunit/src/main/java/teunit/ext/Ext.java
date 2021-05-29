@@ -7,17 +7,19 @@ import io.github.karlatemp.jvmhook.call.MethodReturnValue;
 import tui.TestRun;
 
 public class Ext {
-    private static void dumpStack() {
+    static void dumpStack() {
         new Exception("Stack trace").printStackTrace(System.out);
     }
 
-    private static void dumpStack(String prefix) {
+    static void dumpStack(String prefix) {
         new Exception("Stack trace: " + prefix).printStackTrace(System.out);
     }
 
     private static void load() throws Throwable {
         dumpStack("Loaded TestExt");
+        System.out.println("MethodHook:         " + MethodHook.class.getClassLoader());
         JvmHookFramework instance = JvmHookFramework.INSTANCE;
+        System.out.println("JvmHookFramework:   " + instance.getClass().getClassLoader());
         instance.registerHook(TestRun.class, "error", "()V",
                 call -> call.earlyReturn().returnVoid()
         );

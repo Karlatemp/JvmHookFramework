@@ -16,10 +16,12 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.function.BiConsumer;
 
 public class Bootstrap {
     static final Unsafe unsafe;
     static final WeakHashMap<Class<?>, Map<String, Map<String, Queue<MethodHook>>>> hooks = new WeakHashMap<>();
+    static final ConcurrentLinkedDeque<BiConsumer<Class<?>, ClassLoader>> classPrepareLoadingHook = new ConcurrentLinkedDeque<>();
 
     static {
         unsafe = Unsafe.getUnsafe();
@@ -49,6 +51,16 @@ public class Bootstrap {
 
         @Override
         protected native String getMethodDesc(Method method);
+
+        @Override
+        public void registerClassPrepareHook(BiConsumer<Class<?>, ClassLoader> hook) {
+            classPrepareLoadingHook.add(hook);
+        }
+
+        @Override
+        public void unregisterClassPrepareHook(BiConsumer<Class<?>, ClassLoader> hook) {
+            classPrepareLoadingHook.remove(hook);
+        }
     }
 
     private static void initializeBridge() {
@@ -183,6 +195,12 @@ public class Bootstrap {
             for (MethodHook hook : hooks) {
                 hook.postInvoke(mc, mrv);
             }
+        }
+    }
+
+    private static void broadcastClassPrepare(Class<?> klass, ClassLoader loader) {
+        for (BiConsumer<Class<?>, ClassLoader> hook : classPrepareLoadingHook) {
+            hook.accept(klass, loader);
         }
     }
 

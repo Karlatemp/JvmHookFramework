@@ -7,6 +7,20 @@ dependencies {
     api project(':api')
 }
 
+if (JavaVersion.current() > JavaVersion.VERSION_1_8) {
+    sourceSets {
+        def srcSet = sourceSets
+        register('jdk9') { jdk9 ->
+            jdk9.compileClasspath += srcSet.main.compileClasspath
+        }
+    }
+    compileJdk9Java {
+        sourceCompatibility = JavaVersion.VERSION_1_9
+        targetCompatibility = JavaVersion.VERSION_1_9
+    }
+    jar.from(compileJdk9Java)
+}
+
 task runTest(type: JavaExec) {
     classpath = sourceSets.test.runtimeClasspath
     dependsOn(':testunit:compileJava')

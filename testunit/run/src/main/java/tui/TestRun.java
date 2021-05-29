@@ -1,5 +1,8 @@
 package tui;
 
+import mwcs.Server;
+import mwcs.ServerImpl;
+
 public class TestRun {
     public static void error() {
         throw new Error();
@@ -55,6 +58,12 @@ public class TestRun {
         }
         error1();
         Thread.dumpStack();
+
+        {
+            Server server = new ServerImpl();
+            server.dispatchCommand("whoami");
+        }
+
         System.out.println("Completed");
     }
 }

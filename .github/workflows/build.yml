@@ -41,7 +41,7 @@ jobs:
         with:
           name: ${{ matrix.cross }}
           path: |
-            native/cmake-build-debug/bin
+            native/cmake-build-release/bin
       - name: RunNative
         if: "${{ matrix.cross  == 'linux-x64' }}"
         run: ./gradlew runCiTest
@@ -70,7 +70,7 @@ jobs:
         with:
           name: MacOS
           path: |
-            native/cmake-build-debug/bin
+            native/cmake-build-release/bin
       - name: RunNative
         run: ./gradlew runCiTest
 

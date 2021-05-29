@@ -21,5 +21,6 @@ AUX_SOURCE_DIRECTORY(src SRC_DIR)
 set(CMAKE_ANDROID_ARM_MODE ON)
 set(CMAKE_ANDROID_ARM_NEON ON)
 set(CMAKE_ANDROID_STL_TYPE system)
+add_compile_definitions(DEBUG)
 
 add_library(native SHARED ${SRC_DIR} src/lib.cpp)

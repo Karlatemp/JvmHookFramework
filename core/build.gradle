@@ -30,6 +30,6 @@ task runTest(type: JavaExec) {
 //    jvmArgs(
 //            "-javaagent:" + project(':testunit-launcher').buildDir + "/libs/testunit-launcher-" + project(':testunit-launcher').version + ".jar=iog.B"
 //    )
-    jvmArgs('-agentpath:E:\\IDEAProjects\\JvmHookFramework\\native\\cmake-build-debug\\libnative.dll')
+    jvmArgs('-agentpath:E:\\IDEAProjects\\JvmHookFramework\\native\\cmake-build-release\\libnative.dll')
     args(project(':testunit').buildDir.toString() + "/classes/java/main")
 }

@@ -44,12 +44,30 @@ public class Bootstrap {
     private static class JvmHookFrameworkBridge extends JvmHookFramework {
         @Override
         public void registerHook(Class<?> target, String methodName, String methodDesc, MethodHook hook) {
-            Bootstrap.registerHook(target, methodName, methodDesc, hook);
+            synchronized (this) {
+                Bootstrap.registerHook(target, methodName, methodDesc, hook);
+            }
         }
 
         @Override
         public void unregisterHook(Class<?> target, String methodName, String methodDesc, MethodHook hook) {
-            Bootstrap.unregisterHook(target, methodName, methodDesc, hook);
+            synchronized (this) {
+                Bootstrap.unregisterHook(target, methodName, methodDesc, hook);
+            }
+        }
+
+        @Override
+        public void registerHook(Method method, MethodHook hook) {
+            synchronized (this) {
+                Bootstrap.registerHook0(method, hook);
+            }
+        }
+
+        @Override
+        public void unregisterHook(Method method, MethodHook hook) {
+            synchronized (this) {
+                Bootstrap.unregisterHook0(method, hook);
+            }
         }
 
         @Override
@@ -97,86 +115,32 @@ public class Bootstrap {
         return map;
     }
 
-    public static void registerHook(
+    private native static void registerHook(
             Class<?> target, String methodName, String methodDesc, MethodHook hook
-    ) {
-        synchronized (Bootstrap.class) {
-            notifyHookClass(target);
-            registerHook0(
-                    ("L" + target.getName() + ";").replace('.', '/'),
-                    methodName,
-                    methodDesc
-            );
-        }
-        Map<String, Map<String, Queue<MethodHook>>> tables = getTables(target, true);
-        synchronized (tables) {
-            tables.computeIfAbsent(
-                    methodName, $ -> new HashMap<>()
-            ).computeIfAbsent(methodDesc, $ -> new ConcurrentLinkedDeque<>())
-                    .add(hook);
-        }
-    }
+    );
 
-    public static void unregisterHook(
+    private native static void unregisterHook(
             Class<?> target, String methodName, String methodDesc, MethodHook hook
-    ) {
-        synchronized (Bootstrap.class) {
-            unregisterHook0(
-                    ("L" + target.getName() + ";").replace('.', '/'),
-                    methodName,
-                    methodDesc
-            );
-        }
-        Map<String, Map<String, Queue<MethodHook>>> tables = getTables(target, false);
-        if (tables == null) return;
-        synchronized (tables) {
-            Map<String, Queue<MethodHook>> queueMap = tables.get(methodName);
-            if (queueMap == null) return;
-            Queue<MethodHook> hooks = queueMap.get(methodDesc);
-            if (hooks != null) {
-                hooks.remove(hook);
-            }
-        }
-    }
+    );
 
     private static native void registerHook0(
-            String className, String methodName, String methodDesc
+            Method method, MethodHook hook
     );
 
     private static native void unregisterHook0(
-            String className, String methodName, String methodDesc
+            Method method, MethodHook hook
     );
 
-    private static boolean shouldHookMethodEnter(
-            Class<?> klass,
-            ClassLoader classLoader,
-            String name,
-            String desc,
-            int modifiers
-    ) {
-        if (klass.getName().startsWith("jdk.internal.reflect.")) return false;
-        if (klass.getName().startsWith("sun.reflect.")) return false;
-        Map<String, Map<String, Queue<MethodHook>>> tables = getTables(klass, false);
-        if (tables == null) return false;
-        Map<String, Queue<MethodHook>> queueMap = tables.get(name);
-        if (queueMap == null) return false;
-        Queue<MethodHook> hooks = queueMap.get(desc);
-        return hooks != null && !hooks.isEmpty();
-    }
+    private static native Object valueOfPointer(
+            long pointer, int index
+    );
 
     private static void broadcastMethodEnter(
-            MethodCall call
+            MethodCall call, long pointer, int size
     ) throws Throwable {
-
-        Map<String, Map<String, Queue<MethodHook>>> tables = getTables(call.getMethodOwner(), false);
-        if (tables == null) return;
-        Map<String, Queue<MethodHook>> queueMap = tables.get(call.getMethodName());
-        if (queueMap == null) return;
-        Queue<MethodHook> hooks = queueMap.get(call.getMethodDescription());
-        if (hooks != null) {
-            for (MethodHook hook : hooks) {
-                hook.preInvoke(call);
-            }
+        if (size < 1) return;
+        for (int i = 0; i < size; i++) {
+            ((MethodHook) valueOfPointer(pointer, i)).preInvoke(call);
         }
     }
 
@@ -188,21 +152,16 @@ public class Bootstrap {
             MethodCall.ForceEarlyReturn fer,
             MethodReturnValue mrv,
             MethodInfo mi,
-            Class<?> caller
+            Class<?> caller,
+            long pointer, int size
     ) throws Throwable {
-
-        Map<String, Map<String, Queue<MethodHook>>> tables = getTables(c, false);
-        if (tables == null) return;
-        Map<String, Queue<MethodHook>> queueMap = tables.get(n);
-        if (queueMap == null) return;
-        Queue<MethodHook> hooks = queueMap.get(desc);
-        if (hooks != null) {
+        if (size > 0) {
             MethodCallImpl mc = new MethodCallImpl(
                     c, n, desc, modifier, NoopArguments.I, fer, mi
             );
             mc.caller = caller;
-            for (MethodHook hook : hooks) {
-                hook.postInvoke(mc, mrv);
+            for (int i = 0; i < size; i++) {
+                ((MethodHook) valueOfPointer(pointer, i)).postInvoke(mc, mrv);
             }
         }
     }

@@ -89,7 +89,7 @@ task runCiTest(type: JavaExec) {
     dependsOn(tasks.packAll)
     dependsOn(':testunit:jar')
 
-    def natives = rootProject.file('native/cmake-build-debug').listFiles()
+    def natives = rootProject.file('native/cmake-build-release').listFiles()
     if (natives != null && natives.length != 0) {
         def lib = natives.find {
             it.isFile() && (

@@ -1,3 +1,5 @@
+import java.nio.file.Files
+
 rootProject.name = 'JvmHookFramework'
 def includeProject = { String name, String path ->
     include(name)
@@ -13,3 +15,19 @@ includeProject(":pack-release", "pack-release")
 
 
 include(':ci-release-helper')
+
+({
+    def exts = new File(rootDir, 'exts')
+    def extBuildTemplate = new File(exts, 'template.build.gradle')
+    for (def subproject : exts.listFiles()) {
+        if (subproject.isDirectory()) {
+            def subscript = new File(subproject, 'build.gradle')
+            if (!subscript.isFile()) {
+                Files.copy(extBuildTemplate.toPath(), subscript.toPath())
+            }
+            def projName = ':extension-' + subproject.name
+            include(projName)
+            project(projName).projectDir = subproject
+        }
+    }
+})()

@@ -16,6 +16,7 @@ public class Ext {
     }
 
     private static void load() throws Throwable {
+        System.setErr(System.out);
         dumpStack("Loaded TestExt");
         System.out.println("MethodHook:         " + MethodHook.class.getClassLoader());
         JvmHookFramework instance = JvmHookFramework.INSTANCE;

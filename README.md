@@ -3,6 +3,8 @@ HookFramework for jvm
 
 [简体中文](README-zh.md)
 
+**Warning: Not suitable for production environment, very slow**
+
 # Download
 
 Go to [Actions](https://github.com/Karlatemp/JvmHookFramework/actions).

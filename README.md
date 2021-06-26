@@ -1,6 +1,8 @@
 # JvmHookFramework
 HookFramework for jvm
 
+See (KasukuSakura/JvmHookFramework)[https://github.com/KasukuSakura/JvmHookFramework]
+
 [简体中文](README-zh.md)
 
 **Warning: Not suitable for production environment, very slow**
